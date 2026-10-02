@@ -1,0 +1,24 @@
+<Solution>
+  <Folder Name="/build/">
+    <Project Path="build/IngaCookBook.Build/IngaCookBook.Build.csproj" />
+  </Folder>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="src/IngaCookBook.ServiceDefaults/IngaCookBook.ServiceDefaults.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/IngaCookBook.AspireIntegrationTests/IngaCookBook.AspireIntegrationTests.csproj" />
+    <Project Path="tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj" />
+    <Project Path="tests/IngaCookBook.IntegrationTests/IngaCookBook.IntegrationTests.csproj" />
+    <Project Path="tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj" />
+    <Project Path="tests/IngaCookBook.Testing/IngaCookBook.Testing.csproj" />
+    <Project Path="tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj" />
+  </Folder>
+  <Project Path="src/IngaCookBook.AppHost/IngaCookBook.AppHost.csproj" />
+  <Project Path="src/IngaCookBook.Client/IngaCookBook.Client.csproj" />
+  <Project Path="src/IngaCookBook.SharedKernel/IngaCookBook.SharedKernel.csproj" />
+  <Project Path="src/IngaCookBook.UI/IngaCookBook.UI.csproj" />
+  <Project Path="src/IngaCookBook/IngaCookBook.csproj" />
+</Solution>

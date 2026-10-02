@@ -1,0 +1,6 @@
+{
+  "appHost": {
+    "language": "csharp",
+    "path": "src/IngaCookBook.AppHost/IngaCookBook.AppHost.csproj"
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "dotnet.defaultSolution": "IngaCookBook.slnx",
+  "aspire.dashboardBrowser": "openExternalBrowser"
+}
