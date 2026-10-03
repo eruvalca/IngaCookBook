@@ -23,7 +23,7 @@ else if (_loaded)
     <form method="get" action="/recipes" class="library-search" role="search">
         <FluentStack VerticalAlignment="VerticalAlignment.Bottom" HorizontalGap="var(--spacingHorizontalM)" Wrap="true">
             <div class="form-field"><label for="recipe-search">Find a recipe</label><input id="recipe-search" name="q" type="search" value="@Query" placeholder="Vanilla, caramel, sourdough…" /></div>
-            <button type="submit">Search</button>
+            <button class="native-button" type="submit">Search</button>
             <a href="/recipes">Clear</a>
         </FluentStack>
     </form>

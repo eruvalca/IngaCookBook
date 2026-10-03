@@ -333,13 +333,18 @@ dotnet test --solution IngaCookBook.slnx
 
 - Review documentation as part of implementation work, before any authorized
   commit and before reporting completion. Update affected instructions and docs;
-  leave accurate documentation unchanged. Briefly report the review outcome.
+  leave accurate documentation unchanged. Report the outcome in a final-response
+  sentence beginning `Documentation review: complete`, including when no updates
+  were needed. If unable to review, use `Documentation review: blocked` and explain
+  the limitation. No acknowledgement file is needed.
   This does not authorize a commit or broaden a read-only task.
 - Keep durable agent conventions here, setup and runtime workflows in `README.md`,
   build rules in `build/README.md`, and test conventions in `tests/README.md`.
   Update existing feature and workflow documentation rather than duplicating it.
 - The project-owned Codex `UserPromptSubmit` hook supplies this reminder and
   records a workspace baseline. The companion `Stop` hook requests at most one
-  finishing review when the workspace changes during a turn. These hooks are
-  advisory, not proof of documentation accuracy or a Git commit gate.
+  finishing review when the workspace changes during a turn and the final
+  response has not reported the review outcome. Acknowledgements apply only to
+  that turn's reported workspace state. These hooks are advisory, not proof of
+  documentation accuracy or a Git commit gate.
   See [agent hook maintenance](build/agent-hooks.md) for setup and validation.

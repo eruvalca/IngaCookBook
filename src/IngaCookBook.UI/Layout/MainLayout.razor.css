@@ -12,14 +12,14 @@
     width: 100%;
     height: 100%;
     padding-inline: 1.5rem;
-    background: var(--colorBrandBackground);
-    color: var(--colorNeutralForegroundOnBrand);
-    border-bottom: 1px solid var(--colorNeutralStroke2);
+    background: var(--colorNeutralBackground1);
+    color: var(--colorBrandForeground1);
 }
 
 .page ::deep .site-header-area {
-    background: var(--colorBrandBackground);
-    color: var(--colorNeutralForegroundOnBrand);
+    background: var(--colorNeutralBackground1);
+    color: var(--colorBrandForeground1);
+    border-bottom: 1px solid var(--colorNeutralStroke2);
 }
 
 .site-name {
@@ -31,11 +31,15 @@
     letter-spacing: -0.03em;
 }
 
-.site-tagline { margin-left: auto; color: var(--colorNeutralForegroundOnBrand); font-size: var(--fontSizeBase200); }
+.menu-toggle {
+    --colorNeutralForegroundOnBrand: var(--colorBrandForeground1);
+}
+
+.site-tagline { margin-left: auto; color: var(--colorPaletteGreenForeground1); font-size: var(--fontSizeBase200); }
 @media (max-width: 600px) { .site-tagline { display: none; } }
 
 .site-name:focus-visible {
-    outline-color: var(--colorNeutralForegroundOnBrand, #fff);
+    outline-color: var(--colorBrandForeground1);
 }
 
 .page ::deep .site-navigation {

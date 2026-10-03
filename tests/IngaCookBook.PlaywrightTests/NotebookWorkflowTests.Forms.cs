@@ -34,8 +34,10 @@ public sealed partial class NotebookWorkflowTests
         await Field(page, "Recipe name").FillAsync("Brown butter vanilla");
         await Field(page, "About this recipe").FillAsync("A smooth, scoopable ice cream.");
         await Field(page, "Evaluation metric").FillAsync("Texture");
+        await VerifyLongFormLayoutAsync(page);
         await InteractiveButton(page, "Create recipe & first version").ClickAsync();
         await InteractiveButton(page, "Add ingredient").ClickAsync();
+        await VerifyDropdownLayoutAsync(page);
         await Field(page, "Ingredient name").FillAsync("Heavy cream");
         await Field(page, "Amount").FillAsync("100.123456");
         await Field(page, "Amount").PressAsync("Tab");
@@ -112,6 +114,11 @@ public sealed partial class NotebookWorkflowTests
         // A later visit exercises Auto's cached WebAssembly renderer and its HTTP adapter.
         await page.GotoAsync(variation + "/edit");
         await page.Locator("[data-renderer=WebAssembly]").WaitForAsync(new() { Timeout = 60000 });
+        var token = await page.Context.APIRequest.GetAsync("/api/notebook/token");
+        token.Status.ShouldBe(200);
+        token.Headers["cache-control"].ShouldBe("no-cache, no-store");
+        token.Headers["pragma"].ShouldBe("no-cache");
+        await token.DisposeAsync();
         await Field(page, "Recipe notes").FillAsync("Saved from the browser renderer.");
         await VerifyInputsLockedDuringSaveAsync(page);
         await page.ReloadAsync();

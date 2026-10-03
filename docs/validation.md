@@ -51,7 +51,54 @@ percentage is claimed.
 bUnit verifies rendered behavior; it does not stand in for browser JavaScript,
 layout, storage, or PostgreSQL checks.
 
-## Commands
+## Brand/layout follow-up — October 3, 2026
+
+The follow-up to `e8d1b31` fixes document scrolling, Fluent dropdown/native style
+collisions, header and control alignment, logo-based appearance, and routine
+antiforgery/blob-provisioning diagnostics. Manual evidence and the remaining
+Aspire watcher limitation are in [workflow QA](workflow-qa.md#brand-and-layout-investigation--october-3-2026).
+
+The subsequent [ContainerExec investigation](workflow-qa.md#controlled-verification-of-the-upstream-fix)
+reproduced the 13.6.0 defect and verified Microsoft's 13.6.1 staging fix in isolated
+AppHosts, including a late command after the five-minute watch restart. The
+application remains on stable 13.6.0; those diagnostic runs do not add to the
+automated application-test counts below.
+
+The final project/group runs again passed **506 unique tests**, **0 failed**, and
+**0 skipped**: unit 206, component 256, PostgreSQL 35, Aspire 1, Chromium 8.
+The two `CookCanRecordEvaluateCompareAndPrintAnExperiment` cases now additionally
+assert actual wheel scrolling through a long metric form, field/action bounds,
+header height, Fluent dropdown border/padding and selection, equal action
+heights, and authenticated antiforgery cache headers. The guard cases still cover
+both Server and WebAssembly. Browser groups ran separately to bound resource use.
+
+Commands for this follow-up (from the repository root):
+
+```powershell
+dotnet format IngaCookBook.slnx --severity warn
+dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
+dotnet build IngaCookBook.slnx
+dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj
+dotnet test --project tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj
+dotnet test --project tests/IngaCookBook.IntegrationTests/IngaCookBook.IntegrationTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.AspireIntegrationTests/IngaCookBook.AspireIntegrationTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --filter-method '*CookCanRecordEvaluateCompareAndPrintAnExperiment'
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-build --filter-method '*EditorProtectsEnhancedNavigationAndJournalUsesBrowserDates'
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-build --filter-method '*FluentNavigationPreservesDocumentAndCounterWorks'
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-build --filter-method '*ArtifactFailuresPreserveOriginalExceptionAndAttemptBothCaptures'
+```
+
+The workflow pair passed once, then passed again after explicit row-count waits
+were added to make repeated Add/Remove actions wait for rendering. This is a
+repeat of two cases, not two additional tests. No test failures were observed in
+this follow-up. Documentation review updated setup/style guidance, the feature
+theme description, scrolling-test guidance, and the existing QA/validation logs.
+AGENTS.md and build rules remained accurate.
+The final full solution build passed with zero warnings/errors and formatting
+verification was clean. The post-build manual upload/log check found no application
+warnings/errors; the separately documented Aspire watch failure still occurs.
+
+## Earlier validation commands
 
 The final October 3 runs after both QA follow-ups passed **506 tests** in total, with **0 failed** and
 **0 skipped**, across separate project runs and four browser groups:

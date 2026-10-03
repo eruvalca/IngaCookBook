@@ -1,5 +1,153 @@
 # Exploratory kitchen workflow QA
 
+## Brand and layout investigation — October 3, 2026
+
+Baseline: `e8d1b31`, plus this working change set. Tested through Playwright's
+Chromium library against the real Aspire app, PostgreSQL and Azurite. A separate
+synthetic `Inga’s brand QA kitchen` workspace contains these experiments; existing
+recipes were not edited. Desktop was 1440 × 900, phone viewport 390 × 844,
+timezone America/Chicago. Browser actions used normal entry, selection and
+navigation; wheel scrolling was checked explicitly.
+
+| Finding | Diagnosis and outcome |
+| --- | --- |
+| B4: wheel scrolling does nothing | Reproduced `body { height: 100dvh; overflow: hidden }` from Fluent's baseline. The document was taller than the viewport but wheel input left `scrollY` at zero. Application CSS now restores document scrolling. Long metric settings scrolled 657 px on desktop and 741 px on the phone viewport. |
+| B5: inset line in the header | The outer layout item had 8 px padding around a nested header with a bottom border. The header now occupies its full 64 px row with a single border at the outside edge. |
+| B6: dropdown inner box and low text | A global native `button` rule added borders/padding to Fluent's light-DOM combobox button. Native styles are now scoped; the inner dropdown control has zero border/padding. Pointer and keyboard selection both worked. |
+| B7: misaligned action/input rows | Native action links were taller than Fluent buttons; field margins and an empty message-row gap displaced metric controls. Shared action sizing and scoped field-row alignment correct these. |
+| I6: logo theme and phone readability | Coral/ivory/green tokens replace the brown palette in light/dark/system modes. Standards use green, the focus panel fits its content, the static navigation shares the surface palette, and score tables give metric names more room on phones. |
+| B8: antiforgery cache warning | The API filter set only `no-store`, conflicting with framework token generation. Responses now use the framework-compatible `no-cache, no-store` plus `Pragma: no-cache`. |
+| I7: routine Azure container conflict warning | Every upload attempted `CreateIfNotExists`, producing a handled Azure 409 for the existing container. Uploads now check existence first; the race-safe create remains for initial provisioning. Storage errors are still reported. |
+| Open in pinned 13.6.0: Aspire ContainerExec watcher timeout | Confirmed upstream regression. A controlled comparison reproduced missed command state in 13.6.0 and verified the official 13.6.1 staging fix across the five-minute watch restart. See investigation below. |
+
+### Realistic workflow checks
+
+| Scenario | Observed result |
+| --- | --- |
+| Registration, confirmation, sign-in, workspace | A fresh owner created a private USD workspace through the existing Identity flow. |
+| Horchata baseline | Saved 600 g milk, 240 g cream, 120 g sugar and 40 g rice, three preparation steps and a 1000 g yield. Package quantities/prices produced the expected $3.60 total. |
+| Photos | A text file was rejected with feedback. The supplied 1280 × 1280 business-reference JPEG uploaded and decoded through authenticated blob delivery. It was used only as QA photo content. |
+| Batches and repeated tastings | Two unchanged baseline batches retained three distinct tastings. Score `11` was rejected unchanged. Blank criteria remained unscored. |
+| Audited corrections | Corrected creaminess 7 → 8 with a reason and added actual aging duration to batch notes. Audit summaries retained the correction reasons and prior records. |
+| Controlled variation | Changed only cream 240 → 260 g. Comparison showed that ingredient change, creaminess 8 → 9 and scoopability 6 → 8. |
+| Related changes and branches | A sibling from V1 changed rice quantity and infusion time. Saving required an explanation; both V2 and V3 appeared under V1. Promoting V3 created an independent recipe with provenance. |
+| Pinned nested recipe and print | Affogato included 100 g of preserved V2 and espresso. Print expanded the nested recipe. Correcting V2's yield from 1000 to 1020 g left the affogato's saved 1000 g snapshot intact. A4 PDF inspected. |
+| Long criteria settings | Added six criteria to the five starter metrics, saved, and reached lower controls with the mouse wheel on desktop and phone. |
+| Historical metric deletion | Removing the scored Flavor metric required acknowledgement; saved evaluations then omitted it. |
+| Concurrent tabs | First settings save won. Stale second save showed a conflict and retained its entered description. |
+| Phone input protection | Canceling navigation from a dirty preserved editor retained phone-entered notes. Saving a reasoned correction then succeeded. |
+| Navigation and appearance | Mobile drawer closed after enhanced navigation; library and comparison had no document overflow. Light/dark persisted through navigation, and system mode followed emulated OS changes. No JavaScript console errors/warnings were observed during the workflow session. |
+
+### Aspire log investigation and remaining limitation
+
+The attached stack trace is one failed local orchestration watch, not a series of
+recipe persistence failures. The same `Polly.Timeout.TimeoutRejectedException`
+and `ContainerExec` critical message appeared in repeated clean CLI starts with
+Aspire 13.6.0/KubernetesClient 19.0.2. Web/database/blob resources remained healthy
+and the tested application operations succeeded. Container-command monitoring
+is still affected; this is not classified as a clean AppHost log run.
+
+The October 3 follow-up confirmed the cause against checksum-verified source
+for installed `Aspire.Hosting` 13.6.0 (commit `56f3e9c0d216c0c7069dabb49dd0464e4827744f`):
+
+1. `WatchAsync` awaits the initial Kubernetes watch response inside its bounded
+   initialization pipeline. KubernetesClient 19.0.2 waits for the first content
+   line before returning that response. A healthy but empty event stream can
+   therefore exceed the 60-second initialization budget.
+2. The timeout surrounds the retry strategy, and the watcher's outer retry does
+   not handle `TimeoutRejectedException`. The watch terminates instead of
+   reconnecting. Increasing an application/database timeout does not fix this.
+3. There is also a cancellation gap when the five-minute periodic restart occurs
+   while the watch factory is still waiting for its first event.
+
+Microsoft's [fix #20466](https://github.com/microsoft/aspire/pull/20466) changes
+watch connection timeouts to apply per attempt, retries those timeouts, and
+handles periodic cancellation during factory creation while preserving unrelated
+cancellation. Its [13.6 backport #20664](https://github.com/microsoft/aspire/pull/20664)
+was merged at `07f7de73da886785e4d0b8f22ac35928d56d80ee`. This matches
+[the reported 13.6.0 regression #20609](https://github.com/microsoft/aspire/issues/20609).
+
+#### Controlled verification of the upstream fix
+
+Two disposable .NET 10 AppHosts were run through the Aspire CLI with random
+ports, session containers, and no mounted development data. Neither contained
+IngaCookBook, EF migrations, Azurite, registration, or recipe code. A plain
+PostgreSQL AppHost first reproduced the critical after one minute. The controlled
+pair then included a second, explicit-start PostgreSQL container and an
+associated `/bin/echo` ContainerExec. The parent was started later so the watch
+initially had no command events. Creating that diagnostic resource required
+reflection over Aspire's internal model **only in the ignored reproduction**;
+no reflection workaround was added to application code.
+
+| Build | Idle-watch result | Late command result |
+| --- | --- | --- |
+| Stable 13.6.0, KubernetesClient 19.0.2 | Critical at 18:14:57 UTC, about 60 seconds after host startup. | Parent became healthy, but the command state remained absent in Aspire at the final 480-second observation. |
+| Official staged 13.6.1, KubernetesClient 19.0.2 | No warning/error/critical entries during the 474-second observation. | Parent started at 18:20:03 UTC, six minutes after host startup and beyond the five-minute watch restart. Aspire observed `Finished` and captured `CONTAINER_EXEC_WATCH_OK`. |
+
+The Windows x64 staging CLI archive was SHA-512 checked against Microsoft's
+published checksum. Both its version identity and the restored Hosting package's
+repository metadata identify the merged backport commit above. The immutable
+package feed was `https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-microsoft-aspire-07f7de73/nuget/v3/index.json`.
+The staging archive's build location was `13.6.1-preview.1.26502.4`; its CLI and
+package version are `13.6.1`. This is a **staging validation**, not a claim that
+13.6.1 is released on NuGet.org. The stable feed still ended at 13.6.0 when checked.
+
+The two final controlled observations matched their expected outcomes: one
+reproduced defect and one verified fix. These were diagnostic CLI runs, not a new
+automated application-test pass count. An earlier probe incorrectly relied on
+`WithExplicitStart` on the internal command itself; it executed during startup
+and was excluded from the idle-watch comparison. The corrected probe delays the
+parent container. The existing application suites were not rerun for this
+investigation, and the complete application has not yet been validated on staging.
+
+**Recommendation and decision:** keep IngaCookBook on stable 13.6.0 for now;
+upgrade to stable 13.6.1 (or a later stable release containing #20664) when it is
+published. The tested recipe workflows and database/blob services remain usable,
+but a fresh AppHost restart alone is not a lasting fix for an idle command watch.
+No log suppression, timeout inflation, internal patch, or downgrade was added.
+No background upgrade or monitoring task was scheduled.
+
+When upgrading, update the documented Aspire stack coherently, build the
+solution, run unit/component and affected infrastructure/browser suites, and
+repeat the empty-watch/late-command check beyond five minutes. Verify startup,
+migration completion, `/health`, database/blob access, and relevant AppHost logs.
+The isolated result does not substitute for that complete application validation.
+Both disposable AppHosts were stopped normally. The unrelated AppHost running on
+this machine was left untouched.
+
+Local, ignored evidence is in `TestResults/containerexec/`: `repro/` and `fixed/`
+contain the minimal projects, `validation-summary.json` contains sanitized final
+states/diagnostics, and `fixed-command-output.txt` contains the observed output.
+Files marked `private` and raw CLI logs may contain dashboard credentials and
+must not be shared. Project and global CLI dependencies were not changed.
+
+Sources: [Aspire watch implementation](https://github.com/microsoft/aspire/blob/56f3e9c0d216c0c7069dabb49dd0464e4827744f/src/Aspire.Hosting/Dcp/KubernetesService.cs),
+[Kubernetes client watch response](https://github.com/kubernetes-client/csharp/blob/v19.0.2/src/KubernetesClient/Kubernetes.cs#L53-L87).
+
+Evidence is local and ignored under `TestResults/brand-qa/`: baseline, settings,
+comparison, branches, mobile light/dark library, nested print screenshot and PDF.
+The original screenshots and before-editor capture establish the layout defects.
+Automated commands/results are recorded in [validation](validation.md).
+
+Final build recheck: two more files uploaded together into the existing container;
+all three photos decoded. Application telemetry returned no warnings/errors,
+the browser recorded no JavaScript errors/warnings or HTTP 5xx responses, and the
+Aspire ContainerExec timeout remained the only critical AppHost finding. Metric
+inputs and adjacent buttons had a 0 px bottom-edge difference. At 390 px, the
+document was 390 px wide and all three comparison tables fit their 316 px
+containers. Primary-action foreground/background contrast was 5.30:1 in light
+mode and 5.72:1 in dark mode. The final solution build had zero warnings/errors;
+format verification passed. QA Aspire and browser processes were stopped normally;
+the synthetic workspace remains available for reproducing these scenarios.
+
+Limits: Chromium with phone-sized viewports, not physical touch hardware,
+Safari/Firefox, screen-reader testing, production Azure, or paper-printer output.
+Very rapid scripted clicks initially inspected UI before asynchronous rendering
+completed; subsequent steps waited for rendered controls and used keyboard entry.
+Those automation races were not reported as data-loss defects.
+
+## Original exploration
+
 Run: October 2, 2026 (America/Chicago), commit `ff81f23`.
 Status: completed. Browser exploration through the Codex in-app browser and
 standalone Playwright Chromium 153.0.8010.12, using the local Aspire application,

@@ -43,6 +43,7 @@ public sealed partial class NotebookWorkflowTests(ITestOutputHelper output)
             await page.ScreenshotAsync(new() { Path = Path.Combine(artifacts, "editor.png"), FullPage = true });
             var baseline = page.Url.Replace("/edit", "", StringComparison.Ordinal);
             await page.GetByRole(AriaRole.Link, new() { Name = "← Version details", Exact = true }).ClickAsync();
+            await VerifyVersionActionsLayoutAsync(page);
             await RecordPhotoAndTastingAsync(page);
             await InteractiveButton(page, "Set as standard").ClickAsync();
             await page.GetByText("Current standard", new() { Exact = true }).First.WaitForAsync();

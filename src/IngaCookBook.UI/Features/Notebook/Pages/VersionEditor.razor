@@ -38,7 +38,7 @@
                 <FluentTextArea Disabled="@EditorDisabled" Label="What are you testing?" @bind-Value="_draft.Hypothesis" Placeholder="If I increase the aging time, will the texture improve?" />
                 @if (_parent is not null)
                 {
-                    <h3>@Changes.Count changes from V@(_parent.Number)</h3>
+                    <h3>@Changes.Count @(Changes.Count == 1 ? "change" : "changes") from V@(_parent.Number)</h3>
                     @if (Changes.Count == 0) { <p class="muted">Your ingredients and preparation still match the starting version.</p> }
                     <ul class="change-summary">@foreach (var change in Changes) { <li><strong>@change.Label</strong><br />@change.Before → @change.After</li> }</ul>
                     @if (Changes.Count > 1)

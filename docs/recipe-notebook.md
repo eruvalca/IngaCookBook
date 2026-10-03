@@ -113,7 +113,9 @@ static SSR. Editors and action/upload areas opt into InteractiveAuto. A shared
 `INotebookService` has a scoped server implementation and a WebAssembly HTTP
 adapter. Identity remains static SSR. Fluent UI v5 supplies controls, layout,
 icons, and theme tokens. Appearance follows the system or an explicit light/dark
-preference saved in the browser.
+preference saved in the browser. The visual theme takes its coral pink and
+leaf green from Inga's Frozen Desserts logo, with ivory surfaces in light mode
+and warm dark surfaces at night. Long forms scroll with the document.
 
 Recipe creation, settings, the editor, and the journal reuse collocated JavaScript
 to protect enhanced links and history traversal;

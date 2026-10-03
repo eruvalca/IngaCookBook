@@ -18,7 +18,7 @@
                 <select id="right-version" name="right">@foreach (var version in _recipe.Versions) { <option value="@version.Id" selected="@(version.Id == _right?.Id)">V@(version.Number) · @version.Content.Label</option> }</select>
             </div></FluentGridItem>
         </FluentGrid>
-        <p><button type="submit">Compare versions</button></p>
+        <p><button class="native-button" type="submit">Compare versions</button></p>
     </form>
     @if (_left is not null && _right is not null)
     {
@@ -45,10 +45,10 @@
                     <FluentGridItem Xs="12" Sm="6"><div class="form-field"><label for="left-eval">V@(_left.Number) tasting</label><select id="left-eval" name="le"><option value="">Latest tasting</option>@foreach (var option in EvaluationOptions(_left)) { <option value="@option.Id" selected="@(option.Id == LeftEvaluation)">@option.Label</option> }</select></div></FluentGridItem>
                     <FluentGridItem Xs="12" Sm="6"><div class="form-field"><label for="right-eval">V@(_right.Number) tasting</label><select id="right-eval" name="re"><option value="">Latest tasting</option>@foreach (var option in EvaluationOptions(_right)) { <option value="@option.Id" selected="@(option.Id == RightEvaluation)">@option.Label</option> }</select></div></FluentGridItem>
                 </FluentGrid>
-                <p><button type="submit">Compare tastings</button></p>
+                <p><button class="native-button" type="submit">Compare tastings</button></p>
             </form>
             <p>@EvaluationLabel(_left, _leftEvaluation) → @EvaluationLabel(_right, _rightEvaluation)</p>
-            <div class="table-container"><table><caption>Quality scores (1–10)</caption><thead><tr><th>Metric</th><th>V@(_left.Number)</th><th>V@(_right.Number)</th><th>Change</th></tr></thead><tbody>
+            <div class="table-container"><table class="quality-scores"><caption>Quality scores (1–10)</caption><thead><tr><th>Metric</th><th>V@(_left.Number)</th><th>V@(_right.Number)</th><th>Change</th></tr></thead><tbody>
                 @foreach (var metric in _recipe.Metrics)
                 {
                     var l = _leftEvaluation?.Scores.FirstOrDefault(s => s.MetricId == metric.Id);

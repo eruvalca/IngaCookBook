@@ -23,7 +23,7 @@ export function initializeAppearance(blazor) {
         document.body.dataset.theme = dark ? 'dark' : 'light';
         const theme = blazor.theme ?? globalThis.Microsoft?.FluentUI?.Blazor?.Utilities?.Theme;
         theme?.setBrandThemeFromSettings({
-            color: '#914F46', hueTorsion: 0, vibrancy: 0,
+            color: '#E4786D', hueTorsion: 0, vibrancy: 0,
             mode: dark ? 'dark' : 'light', isExact: false
         });
         for (const picker of document.querySelectorAll('[data-theme-picker]')) {

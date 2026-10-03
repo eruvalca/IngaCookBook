@@ -18,7 +18,7 @@
         <h2>What makes it good?</h2><p>Choose the qualities you want to evaluate. Each gets a 1–10 score, where 10 is best, and optional notes.</p>
         @foreach (var metric in _metrics)
         {
-            <FluentStack @key="metric.Id" VerticalAlignment="VerticalAlignment.Bottom" HorizontalGap="var(--spacingHorizontalM)">
+            <FluentStack @key="metric.Id" VerticalAlignment="VerticalAlignment.Bottom" Class="control-row" HorizontalGap="var(--spacingHorizontalM)">
                 <FluentTextInput Disabled="@FormDisabled" Label="Evaluation metric" @bind-Value="metric.Name" MaxLength="100" />
                 <FluentButton OnClick="@(() => _metrics.Remove(metric))" Disabled="@FormDisabled">Remove</FluentButton>
             </FluentStack>

@@ -3,7 +3,7 @@
 @inherits NotebookPage
 
 <PageTitle>@(_recipe?.Name ?? "Print recipe") · IngaCookBook</PageTitle>
-<div class="no-print"><a class="back-link" href="@($"/recipes/{RecipeId}/versions/{VersionId}")">← Version details</a><p><button type="button" data-print-recipe>Print recipe</button></p></div>
+<div class="no-print"><a class="back-link" href="@($"/recipes/{RecipeId}/versions/{VersionId}")">← Version details</a><p><button class="native-button" type="button" data-print-recipe>Print recipe</button></p></div>
 <SaveNotice Error="@Error" />
 @if (_recipe is not null && _version is not null)
 {

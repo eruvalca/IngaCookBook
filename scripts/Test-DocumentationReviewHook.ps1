@@ -134,6 +134,67 @@ Invoke-Hook 'UserPromptSubmit' 'duplicate' | Out-Null
 Assert-Result 'Duplicate start event preserves the original baseline' (
     (Invoke-Hook 'Stop' 'duplicate').decision -eq 'block')
 
+# Replay the duplicate-review wording and the explicit final-response contract.
+# A documentation edit by itself must still not count as a completed review.
+$reports = @(
+    @{ Name = 'canonical'; Text = 'Documentation review: complete — setup guidance updated.'; Reported = $true }
+    @{ Name = 'unchanged-docs'; Text = 'Documentation review: complete — no updates needed.'; Reported = $true }
+    @{ Name = 'markdown'; Text = '- **Documentation review:** complete; relevant guidance is current.'; Reported = $true }
+    @{ Name = 'original-final'; Text = 'The detailed investigation report includes reproduction details, evidence, and upgrade criteria. Documentation review is complete; formatting and diff checks passed.'; Reported = $true }
+    @{ Name = 'original-continuation'; Text = 'Documentation review was already completed. No further edits were needed.'; Reported = $true }
+    @{ Name = 'blocked'; Text = 'Documentation review: blocked — the required documentation is unavailable.'; Reported = $true }
+    @{ Name = 'missing'; Text = $null; Reported = $false }
+    @{ Name = 'empty'; Text = ''; Reported = $false }
+    @{ Name = 'unrelated'; Text = 'Code review is complete. Tests passed.'; Reported = $false }
+    @{ Name = 'docs-edit-only'; Text = 'Updated README.md.'; Reported = $false }
+    @{ Name = 'planned'; Text = 'I will complete the documentation review next.'; Reported = $false }
+    @{ Name = 'negated'; Text = 'Documentation review is not complete.'; Reported = $false }
+    @{ Name = 'pending'; Text = 'Documentation review: pending.'; Reported = $false }
+    @{ Name = 'quoted'; Text = '> Documentation review: complete.'; Reported = $false }
+    @{ Name = 'inline-example'; Text = 'Use `Documentation review: complete.` after reviewing.'; Reported = $false }
+    @{ Name = 'fenced'; Text = "``````text`nDocumentation review: complete.`n``````"; Reported = $false }
+    @{ Name = 'unclosed-fence'; Text = "~~~text`nDocumentation review: complete."; Reported = $false }
+    @{ Name = 'after-fence'; Text = "~~~text`nDocumentation review: pending.`n~~~`nDocumentation review: complete."; Reported = $true }
+)
+foreach ($report in $reports) {
+    $turn = 'report-' + $report.Name
+    Invoke-Hook 'UserPromptSubmit' $turn | Out-Null
+    Set-FixtureFile 'README.md' $turn
+    $result = Invoke-Hook 'Stop' $turn @{ last_assistant_message = $report.Text }
+    Assert-Result "Final report '$($report.Name)' has the expected reminder behavior" (
+        $(if ($report.Reported) { $result.Count -eq 0 } else { $result.decision -eq 'block' }))
+}
+
+Invoke-Hook 'UserPromptSubmit' 'ack-snapshot' | Out-Null
+Set-FixtureFile 'source.cs' 'class ReviewedFixture;'
+$acknowledgement = @{ last_assistant_message = 'Documentation review: complete — no updates needed.' }
+Assert-Result 'Explicit acknowledgement avoids the first finishing prompt' (
+    (Invoke-Hook 'Stop' 'ack-snapshot' $acknowledgement).Count -eq 0)
+Assert-Result 'An acknowledged snapshot stays quiet if Stop is repeated without message text' (
+    (Invoke-Hook 'Stop' 'ack-snapshot').Count -eq 0)
+Set-FixtureFile 'source.cs' 'class EditedAfterReviewFixture;'
+Assert-Result 'Further edits are not covered by a stale acknowledgement' (
+    (Invoke-Hook 'Stop' 'ack-snapshot' $acknowledgement).decision -eq 'block')
+Assert-Result 'A stale acknowledgement still requests at most one fallback pass' (
+    (Invoke-Hook 'Stop' 'ack-snapshot' $acknowledgement).Count -eq 0)
+
+Invoke-Hook 'UserPromptSubmit' 'ack-new-turn' | Out-Null
+Set-FixtureFile 'source.cs' 'class NewTurnFixture;'
+Assert-Result 'Acknowledgements do not leak into a different turn' (
+    (Invoke-Hook 'Stop' 'ack-new-turn').decision -eq 'block')
+
+$stateFiles = Get-ChildItem -LiteralPath (Join-Path $fixtureRoot 'artifacts/agent-hooks/documentation') -Filter '*.json'
+$reportedStates = @($stateFiles | ForEach-Object {
+    Get-Content -LiteralPath $_.FullName -Raw | ConvertFrom-Json -AsHashtable
+} | Where-Object { $_.reportedFingerprint })
+Assert-Result 'Acknowledgement state stores hashes without message text' (
+    $reportedStates.Count -gt 0 -and
+    @($reportedStates | Where-Object {
+        $_.reportedFingerprint -notmatch '^[A-F0-9]{64}$' -or
+        $_.reportedMessageHash -notmatch '^[A-F0-9]{64}$' -or
+        ($_ | ConvertTo-Json) -match 'Documentation review'
+    }).Count -eq 0)
+
 $invalidJson = '{invalid' | & pwsh -NoProfile -NonInteractive -File $hookScript
 Assert-Result 'Malformed input fails open with a JSON warning' (
     $LASTEXITCODE -eq 0 -and ($invalidJson | ConvertFrom-Json -AsHashtable).systemMessage)
@@ -186,6 +247,16 @@ if ($IsWindows) {
                 $execution.ExitCode -eq 0 -and ($execution.Output | ConvertFrom-Json -AsHashtable).decision -eq 'block')
             $execution = Invoke-WindowsManifestHook $stopHandler $payload $shell
             Assert-Result "$shell Stop launcher does not repeat the finishing pass" (
+                $execution.ExitCode -eq 0 -and ($execution.Output | ConvertFrom-Json -AsHashtable).Count -eq 0)
+
+            $payload.turn_id = "$shell-acknowledged"
+            $payload.hook_event_name = 'UserPromptSubmit'
+            $execution = Invoke-WindowsManifestHook $startHandler $payload $shell
+            Set-FixtureFile "launcher-$shell.md" 'Reviewed change after the prompt hook.'
+            $payload.hook_event_name = 'Stop'
+            $payload.last_assistant_message = 'Documentation review: complete — hook guidance updated.'
+            $execution = Invoke-WindowsManifestHook $stopHandler $payload $shell
+            Assert-Result "$shell Stop launcher accepts a completed review without a continuation" (
                 $execution.ExitCode -eq 0 -and ($execution.Output | ConvertFrom-Json -AsHashtable).Count -eq 0)
         }
     }

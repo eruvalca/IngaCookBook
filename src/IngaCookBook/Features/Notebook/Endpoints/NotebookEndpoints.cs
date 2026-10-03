@@ -15,7 +15,8 @@ internal static class NotebookEndpoints
             var group = endpoints.MapGroup("/api/notebook").RequireAuthorization().WithTags("Recipe notebook");
             group.AddEndpointFilter(async (context, next) =>
             {
-                context.HttpContext.Response.Headers.CacheControl = "no-store";
+                context.HttpContext.Response.Headers.CacheControl = "no-cache, no-store";
+                context.HttpContext.Response.Headers.Pragma = "no-cache";
                 if (!HttpMethods.IsGet(context.HttpContext.Request.Method))
                 {
                     try

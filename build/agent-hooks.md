@@ -3,7 +3,11 @@
 Documentation maintenance belongs to implementation work. Before an authorized
 commit and before finishing, review whether the task changes setup, behavior,
 architecture, or conventions. Update affected documentation and briefly report
-the outcome. Leave accurate docs unchanged; no acknowledgement file is needed.
+the outcome. Use a final-response sentence such as
+`Documentation review: complete — updated the hook maintenance guide.` or
+`Documentation review: complete — no updates needed.` If review cannot be
+completed, report `Documentation review: blocked — <specific limitation>.`
+Leave accurate docs unchanged; no acknowledgement file is needed.
 
 ## Codex integration
 
@@ -21,12 +25,33 @@ hashes, candidate paths, and a commit ID under ignored
 or file contents. The baseline covers staged and unstaged changes, non-ignored
 untracked files, and `HEAD`. Repeated prompt events keep the original baseline.
 
-`Stop` compares the baseline with the current workspace. If it changed, the hook
-requests one final documentation review through Codex's `decision: "block"`
-response. This continues the agent; it does not reject a Git commit or ask the
-user for approval. The agent reviews the relevant documentation through its
-usual tools, updates it if needed, and reports the outcome. If the review is
-already complete, it can confirm the result without repeating the work.
+`Stop` compares the baseline with the current workspace and inspects Codex's
+`last_assistant_message` field. If the response explicitly reports the review
+outcome, the hook returns success without a continuation. It recognizes the
+final-response forms above, including bold Markdown and bullet formatting, plus
+the existing complete-sentence forms such as `Documentation review is complete`
+and `Documentation review was already completed`. Quoted lines and fenced code
+examples do not count, nor do plans, negation, or a statement that a README was
+edited. This is a narrow acknowledgement convention, not general language
+understanding or proof that the review was sufficient.
+
+An acknowledgement records only hashes of the current workspace state and
+assistant message. Repeated stops for that snapshot stay quiet. Further changes
+cannot reuse the identical old acknowledgement; they need a fresh report or the
+fallback review. Reports do not carry over to another turn. The hook does not
+read transcript files or retain assistant text.
+
+If the workspace changed and no outcome was reported (including when Codex
+omits the message field), `Stop` still requests one final documentation review
+through `decision: "block"`. This continues the agent; it does not reject a Git
+commit or ask the user for approval. The agent reviews the relevant documentation
+through its usual tools, updates it if needed, and reports the outcome.
+
+Previously, the hook checked only the workspace fingerprint. Thus even a final
+response saying the documentation review was complete caused another prompt
+whenever files had changed. The loop guards prevented a *second* fallback, but
+could not prevent that first redundant continuation. The final-response check
+addresses that case while retaining the fallback for an omitted review.
 
 A per-turn marker and `stop_hook_active` prevent repeat passes. Plan-mode turns,
 unchanged workspaces, and missing baselines do not request a finishing review.
@@ -44,7 +69,11 @@ an agent responsibility, and the hook does not authorize another commit.
 
 ## Activation and maintenance
 
-Reload Codex after changing the manifest. Review and trust the project layer and
+The acknowledgement fix changes the PowerShell script, not the event manifest or
+launcher commands. Each invocation reads the script from disk; it does not require
+a new event registration. Input/output use UTF-8 explicitly so Windows console
+code pages do not corrupt final-response punctuation. Reload Codex after changing
+the manifest. Review and trust the project layer and
 new or changed hooks through Codex's hook controls (`/hooks` in the CLI).
 Checked-in configuration does not grant trust. See the
 [official Codex hook documentation](https://learn.chatgpt.com/docs/hooks) for
@@ -68,8 +97,10 @@ pwsh ./scripts/Test-DocumentationReviewHook.ps1
 ```
 
 The checks run in isolated Git fixtures under ignored `artifacts/`. They cover
-baseline comparisons, dirty files, staging, commits, failure handling, and
-finishing-pass loop prevention. On Windows, they exercise both registered
+baseline comparisons, dirty files, staging, commits, failure handling, explicit
+review reports (including the original duplicate exchange), missing/negated/
+quoted reports, later edits after an acknowledgement, and finishing-pass loop
+prevention. On Windows, they exercise both registered
 commands through PowerShell 7, Windows PowerShell, and `cmd.exe` from a
 subdirectory in a path with spaces. They do not establish that the current Codex
 session has loaded or trusted the hooks; verify that separately in Codex.

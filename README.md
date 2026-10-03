@@ -167,7 +167,9 @@ add a v4 web-components script or `FluentDesignTheme`. Appearance defaults to th
 system preference and offers explicit light and dark modes. A small head script
 selects the initial mode before painting; the shared initializer applies the
 pinned v5 brand palette and updates pickers after enhanced navigation. Application
-styles use v5 CSS design tokens.
+styles use v5 CSS design tokens. The logo supplies coral pink (`#E4786D`) and
+leaf-green accents, with ivory neutrals in light mode. Mode-specific token
+overrides keep text and primary actions legible; green also identifies a standard.
 
 The shell uses `FluentLayout`, `FluentNav`, and `FluentNavItem`; the home, counter,
 and authenticated pages use Fluent cards and buttons with native content links.
@@ -200,6 +202,9 @@ Render boundaries are deliberate:
   navigation. Stable layout/hamburger IDs preserve their JS wiring across updates.
   The shell grows with its content and uses document scrolling, allowing Blazor
   to reset scroll position on navigation and restore it through browser history.
+  `app.css` explicitly resets the Fluent baseline's body height/overflow. Check
+  actual wheel scrolling on a long form; automation can focus or scroll an input
+  into view even when ordinary scrolling is blocked.
   The account settings menu does not use interactive categories or event callbacks.
 - Identity forms retain native inputs, submit buttons, form names, antiforgery,
   and passkey hooks. They receive Fluent token styling while preserving static
@@ -211,7 +216,11 @@ Render boundaries are deliberate:
 Shared styles live in `src/IngaCookBook/wwwroot/app.css`: sizing, typography, forms
 (`account-form`, `form-field`, `checkbox-field`), action groups (`actions`),
 notices (`notice` with a semantic `data-kind`), and table overflow
-(`table-container`). Component-specific styles belong in adjacent `.razor.css`
+(`table-container`). Native button styling is scoped to Identity/native forms
+and `native-button`; do not apply borders or padding to every `button`, because
+Fluent dropdowns have light-DOM control buttons. `control-row` aligns labeled
+Fluent fields with adjacent actions, accounting for field margins/message spacing.
+Component-specific styles belong in adjacent `.razor.css`
 files. Use narrowly scoped `::deep` selectors for child component markup.
 
 Custom CSS is limited to application sizing, accessibility, and static form
@@ -376,6 +385,16 @@ Useful CLI commands include `aspire logs ingacookbook`, `aspire otel traces`, an
 `aspire otel logs`. The Aspire MCP server provides the same resource and telemetry
 visibility to agents. Database query telemetry can contain application information;
 keep exports and runtime logs out of Git.
+
+Aspire 13.6.0 has a confirmed idle-watch regression: after about one minute,
+`Watch task over Kubernetes ContainerExec resources terminated unexpectedly`
+can appear even while the application and containers are healthy. The terminated
+watch can miss later container-command state/log updates. A fixed **13.6.1 staging
+build** passed an isolated comparison, including the five-minute watch restart;
+it was not yet on NuGet.org's stable feed when verified. See the
+[diagnosis and validation](docs/workflow-qa.md#aspire-log-investigation-and-remaining-limitation)
+before changing dependencies. Do not treat this as a recipe/database timeout or
+hide it by disabling orchestration logging.
 
 Aspire 13.6 retains dashboard run history automatically in **Run** persistence
 mode. Use the header's run selector to compare the live run with completed runs;

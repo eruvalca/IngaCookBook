@@ -159,6 +159,10 @@ Playwright uses `Microsoft.Playwright` directly with our xUnit core MTP runner a
 Shouldly. Do not add a runner integration that brings VSTest or xUnit assertions
 back into the solution. Locator actions auto-wait; await observable readiness
 with locators before asserting values with Shouldly. Do not use `WaitForTimeout`.
+For scrolling regressions, send actual wheel input and assert document scroll
+position changes. Locator auto-scrolling and full-page screenshots can conceal
+an `overflow: hidden` body. Inspect rendered control bounds for alignment and
+check light-DOM Fluent internals when changing shared native-control styles.
 Each navigation case attempts to retain `page.png` and `trace.zip` independently
 in a unique `bin/<configuration>/net10.0/TestResults/navigation-*` directory.
 Artifact capture is best effort: failures are reported through xUnit test output

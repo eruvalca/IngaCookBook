@@ -17,7 +17,7 @@
         <h2>What makes this recipe good?</h2><p>These criteria are shared across every version and variation. Each is scored from 1–10, where 10 is best.</p>
         @foreach (var metric in _metrics)
         {
-            <FluentStack HorizontalGap="var(--spacingHorizontalM)" VerticalAlignment="VerticalAlignment.Bottom" @key="metric.Id">
+            <FluentStack HorizontalGap="var(--spacingHorizontalM)" VerticalAlignment="VerticalAlignment.Bottom" Class="control-row" @key="metric.Id">
                 <FluentTextInput Disabled="@FormDisabled" Label="Metric name" @bind-Value="metric.Name" MaxLength="100" />
                 <FluentButton Disabled="@FormDisabled" OnClick="@(() => _metrics.Remove(metric))">Remove</FluentButton>
             </FluentStack>

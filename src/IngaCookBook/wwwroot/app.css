@@ -5,42 +5,64 @@
     color: var(--colorNeutralForeground1, #242424);
 }
 
-/* Application theme tokens supplement the Fluent brand palette. */
+/* Ivory neutrals and leaf-green accents complement the logo's coral brand palette. */
 :root[data-appearance="light"] {
-    --colorNeutralBackground1: #fffcf8;
-    --colorNeutralBackground2: #f6f1e9;
-    --colorNeutralBackground3: #efe8dc;
-    --colorNeutralForeground1: #302c27;
-    --colorNeutralForeground2: #645d54;
-    --colorNeutralStroke2: #e2d9cc;
-    --colorBrandBackground2: #f5e6e0;
+    --colorNeutralBackground1: #fffdf9;
+    --colorNeutralBackground2: #faf5ed;
+    --colorNeutralBackground3: #f0e8df;
+    --colorNeutralForeground1: #302e2a;
+    --colorNeutralForeground2: #655e55;
+    --colorNeutralStroke2: #e5dbcf;
+    --colorBrandBackground2: #fbe8e4;
+    --colorBrandBackground: #ac4f46;
+    --colorBrandBackgroundHover: #943f37;
+    --colorBrandBackgroundPressed: #80382f;
+    --colorBrandForeground1: #ac4f46;
+    --colorBrandForegroundLink: #9b443b;
+    --colorBrandForegroundLinkHover: #80382f;
+    --colorPaletteGreenBackground1: #eaf0e3;
+    --colorPaletteGreenForeground1: #4f7138;
     background: var(--colorNeutralBackground2);
 }
 
 :root[data-appearance="dark"] {
-    --colorNeutralBackground1: #24211f;
-    --colorNeutralBackground2: #1b1917;
-    --colorNeutralBackground3: #302c28;
-    --colorNeutralForeground1: #f4eee7;
-    --colorNeutralForeground2: #c2b6aa;
-    --colorNeutralStroke2: #484038;
-    --colorBrandBackground2: #3e2b28;
+    --colorNeutralBackground1: #282522;
+    --colorNeutralBackground2: #1c1c19;
+    --colorNeutralBackground3: #35312b;
+    --colorNeutralForeground1: #f8f1e8;
+    --colorNeutralForeground2: #cdc1b3;
+    --colorNeutralStroke2: #4c453e;
+    --colorBrandBackground2: #432e2c;
+    --colorBrandBackground: #e4786d;
+    --colorBrandBackgroundHover: #ee9287;
+    --colorBrandBackgroundPressed: #d46b60;
+    --colorNeutralForegroundOnBrand: #251c19;
+    --colorBrandForeground1: #f0a69c;
+    --colorBrandForegroundLink: #f0a69c;
+    --colorBrandForegroundLinkHover: #f7c4bc;
+    --colorPaletteGreenBackground1: #2d3926;
+    --colorPaletteGreenForeground1: #b5ce9c;
     background: var(--colorNeutralBackground2);
 }
 
-body { background: var(--colorNeutralBackground2); color: var(--colorNeutralForeground1); }
-.eyebrow { font-size: var(--fontSizeBase100, 0.75rem); font-weight: var(--fontWeightSemibold, 600); letter-spacing: 0.14em; color: var(--colorBrandForeground1); margin-bottom: var(--spacingVerticalM, 1rem); }
+/* Fluent's baseline assumes a viewport-contained app. This shell scrolls the document. */
+body { height: auto; min-height: 100dvh; overflow: visible; background: var(--colorNeutralBackground2); color: var(--colorNeutralForeground1); }
+.eyebrow { font-size: var(--fontSizeBase100, 0.75rem); font-weight: var(--fontWeightSemibold, 600); letter-spacing: 0.14em; color: var(--colorPaletteGreenForeground1); margin-bottom: var(--spacingVerticalM, 1rem); }
 .lede { font-size: var(--fontSizeBase400, 1.125rem); line-height: 1.7; color: var(--colorNeutralForeground2); max-width: 48rem; }
 .muted { color: var(--colorNeutralForeground2); }
 .preserve-lines { white-space: pre-wrap; }
 .back-link { display: inline-block; margin-bottom: var(--spacingVerticalXL, 1.5rem); text-decoration: none; font-size: var(--fontSizeBase200, 0.875rem); }
-.action-link { display: inline-block; padding: var(--spacingVerticalM, 0.75rem) var(--spacingHorizontalL, 1rem); border-radius: var(--borderRadiusMedium, 0.375rem); border: 1px solid var(--colorNeutralStroke1); background: var(--colorNeutralBackground1); font-weight: var(--fontWeightSemibold, 600); text-decoration: none; }
+.action-link { display: inline-block; min-height: 32px; padding: 5px var(--spacingHorizontalM, 0.75rem); border-radius: var(--borderRadiusMedium, 0.375rem); border: 1px solid var(--colorNeutralStroke1); background: var(--colorNeutralBackground1); font-weight: var(--fontWeightSemibold, 600); line-height: 20px; text-decoration: none; }
 .action-link.primary { background: var(--colorBrandBackground); border-color: var(--colorBrandBackground); color: var(--colorNeutralForegroundOnBrand); }
 .action-link.primary:hover { background: var(--colorBrandBackgroundHover); }
 .notebook-panel { width: 100%; min-width: 0; padding: clamp(1.25rem, 3vw, 2rem); margin-block: var(--spacingVerticalL, 1rem); background: var(--colorNeutralBackground1); border: 1px solid var(--colorNeutralStroke2); border-radius: var(--borderRadiusXLarge, 0.75rem); box-shadow: var(--shadow2); }
 .editor-form fluent-field { width: 100%; min-width: 0; }
 .editor-form fluent-text-input, .editor-form fluent-text-area, .editor-form fluent-textarea, .editor-form fluent-select, .editor-form fluent-number-input { width: 100%; }
 .editor-form > * { margin-bottom: var(--spacingVerticalL, 1rem); }
+/* Field margins must not shift a labeled input above its adjacent action. */
+.control-row > fluent-field { margin-block: 0; }
+/* FluentField reserves a final 2px grid gap for its optional message row. */
+.control-row > fluent-button { margin-bottom: var(--spacingVerticalXXS); }
 .badge { display: inline-block; padding: var(--spacingVerticalXS, 0.25rem) var(--spacingHorizontalM, 0.75rem); background: var(--colorNeutralBackground3); color: var(--colorNeutralForeground2); border-radius: var(--borderRadiusCircular, 999px); font-size: var(--fontSizeBase200, 0.875rem); font-weight: var(--fontWeightSemibold, 600); }
 .badge.standard { background: var(--colorPaletteGreenBackground1); color: var(--colorPaletteGreenForeground1); }
 .empty-state { padding: clamp(2rem, 7vw, 5rem); text-align: center; border: 1px dashed var(--colorBrandStroke2); border-radius: var(--borderRadiusXLarge); margin-block: var(--spacingVerticalXXL); background: var(--colorNeutralBackground1); }
@@ -121,9 +143,16 @@ button, input, select, textarea {
     font: inherit;
 }
 
-button {
+/* Native SSR controls only: Fluent dropdowns render their own light-DOM buttons. */
+.native-button,
+.account-form button,
+.account-sections button,
+.site-navigation button,
+#blazor-error-ui button {
     max-width: 100%;
-    padding: 0.4rem 0.75rem;
+    min-height: 32px;
+    padding: 5px var(--spacingHorizontalM, 0.75rem);
+    line-height: 20px;
     cursor: pointer;
     border: 1px solid var(--colorNeutralStroke1, #d1d1d1);
     border-radius: var(--borderRadiusMedium, 4px);

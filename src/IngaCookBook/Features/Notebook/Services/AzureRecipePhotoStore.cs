@@ -10,7 +10,12 @@ internal sealed class AzureRecipePhotoStore(BlobServiceClient client) : IRecipeP
     public async Task SaveAsync(string key, Stream content, string contentType, CancellationToken cancellationToken)
     {
         var container = client.GetBlobContainerClient(ContainerName);
-        await container.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken);
+        // Avoid a routine ContainerAlreadyExists response on every subsequent photo.
+        // CreateIfNotExists still handles two first uploads racing to provision it.
+        if (!(await container.ExistsAsync(cancellationToken)).Value)
+        {
+            await container.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken);
+        }
         await container.GetBlobClient(key).UploadAsync(content,
             new BlobUploadOptions { HttpHeaders = new BlobHttpHeaders { ContentType = contentType } }, cancellationToken);
     }

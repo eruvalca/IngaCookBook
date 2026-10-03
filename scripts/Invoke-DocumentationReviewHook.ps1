@@ -3,6 +3,10 @@
 param()
 
 $ErrorActionPreference = 'Stop'
+# Codex sends UTF-8 JSON. Windows console defaults can otherwise turn Unicode
+# punctuation in the final response into OEM-code-page characters.
+[Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
 
 function Get-GitText([string[]] $Arguments) {
     $output = & git -C $repoRoot @Arguments 2>$null
@@ -15,6 +19,42 @@ function Get-GitText([string[]] $Arguments) {
 function Get-TextHash([string] $Text) {
     return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
         [Text.Encoding]::UTF8.GetBytes($Text)))
+}
+
+function Test-DocumentationReviewReported([string] $Message) {
+    # This is an explicit assistant acknowledgement, not an assessment of doc
+    # quality. Inspect only the Stop payload; never read or retain transcripts.
+    # Quoted examples and code blocks must not satisfy the acknowledgement.
+    $prose = [Collections.Generic.List[string]]::new()
+    $fenceCharacter = ''
+    $fenceLength = 0
+    foreach ($line in ($Message -split '\r?\n')) {
+        if ($line -match '^\s*(`{3,}|~{3,})') {
+            $fence = $Matches[1]
+            if (-not $fenceCharacter) {
+                $fenceCharacter = $fence.Substring(0, 1)
+                $fenceLength = $fence.Length
+            }
+            elseif ($fence.StartsWith($fenceCharacter, [StringComparison]::Ordinal) -and
+                $fence.Length -ge $fenceLength -and $line.Trim() -eq $fence) {
+                $fenceCharacter = ''
+            }
+            $prose.Add('')
+            continue
+        }
+        if ($fenceCharacter -or $line -match '^\s*>') {
+            $prose.Add('')
+            continue
+        }
+        $prose.Add(($line -replace '\*\*|__', ''))
+    }
+
+    # Prefer the documented final-line form. Also accept the complete-sentence
+    # forms already used in this project, including the original duplicate turn.
+    $pattern = '(?im)(?:^\s*(?:[-*+]\s+)?|[.!?]\s+)Documentation review' +
+        '(?::\s*(?:complete|blocked)|\s+(?:(?:is|was)\s+)?(?:already\s+)?completed?)' +
+        '(?=\s*(?:[.;!\r\n]|[—–-]|$))'
+    return [regex]::IsMatch(($prose -join "`n"), $pattern)
 }
 
 function Get-WorkspaceSnapshot {
@@ -54,6 +94,7 @@ function Get-WorkspaceSnapshot {
 
 $reviewInstruction = @'
 Documentation is part of implementation work. Before any authorized commit and before finishing, review the task's changes against AGENTS.md and relevant README/feature docs. Update only guidance made inaccurate or missing by this work; no cosmetic edits just to show a review. Keep durable agent rules in AGENTS.md, setup in README.md, build rules in build/README.md, and test conventions in tests/README.md. Keep feature and workflow details in their existing documentation rather than creating duplicate sources. Preserve unrelated changes and installed third-party skill files. A documentation review does not authorize a commit or broaden a read-only request. If no update is needed, leave docs unchanged. Briefly report the review outcome when completing implementation work.
+After reviewing, include a final-response sentence beginning "Documentation review: complete" and its outcome (including when no updates were needed). If unable to review, use "Documentation review: blocked" and explain the limitation. These acknowledgements prevent a redundant finishing prompt; no acknowledgement file is needed.
 '@
 
 try {
@@ -110,6 +151,22 @@ try {
     }
     $current = Get-WorkspaceSnapshot
     if ($baseline.fingerprint -eq $current.fingerprint) {
+        '{}'
+        exit 0
+    }
+
+    if ($baseline.reportedFingerprint -eq $current.fingerprint) {
+        '{}'
+        exit 0
+    }
+    $messageHash = Get-TextHash ([string] $event.last_assistant_message)
+    if ($messageHash -ne $baseline.reportedMessageHash -and
+        (Test-DocumentationReviewReported ([string] $event.last_assistant_message))) {
+        # Remember only hashes. An unchanged final message must not acknowledge
+        # additional edits after this snapshot, even if Stop fires again.
+        $baseline.reportedFingerprint = $current.fingerprint
+        $baseline.reportedMessageHash = $messageHash
+        $baseline | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $statePath -Encoding utf8
         '{}'
         exit 0
     }
