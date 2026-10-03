@@ -1,37 +1,30 @@
 @page "/"
 
-<PageTitle>Home</PageTitle>
-
-<h1>Welcome to IngaCookBook</h1>
-<p>Make yourself at home. Try the counter or sign in to manage your account.</p>
-
-<div class="home-content">
-    <FluentGrid Class="home-cards" Spacing="6">
-        <FluentGridItem Xs="12" Md="6">
-            <FluentCard>
-                <FluentStack Orientation="Orientation.Vertical" VerticalGap="var(--spacingVerticalM)">
-                    <h2>Try the counter</h2>
-                    <p>A simple place to try an interactive page.</p>
-                    <a href="counter">Open counter</a>
-                </FluentStack>
-            </FluentCard>
+<PageTitle>IngaCookBook · A little better, every batch</PageTitle>
+<section class="welcome-hero">
+    <FluentGrid Spacing="8">
+        <FluentGridItem Xs="12" Md="7">
+            <p class="eyebrow">YOUR KITCHEN. YOUR CURIOSITY.</p>
+            <h1>A little better,<br />every batch.</h1>
+            <p class="lede">A thoughtful home for your recipes, experiments, and delicious discoveries. Remember what changed. Understand what worked. Make it again.</p>
+            <AuthorizeView>
+                <Authorized><a class="action-link primary" href="/recipes">Open your recipe notebook →</a></Authorized>
+                <NotAuthorized><FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)"><a class="action-link primary" href="/Account/Register">Start your notebook</a><a class="action-link" href="/Account/Login">Welcome back</a></FluentStack></NotAuthorized>
+            </AuthorizeView>
+            <p class="welcome-footnote">For ice cream, sourdough, your signature sauce,<br />and the next idea you can't wait to try.</p>
         </FluentGridItem>
-        <FluentGridItem Xs="12" Md="6">
-            <FluentCard>
-                <FluentStack Orientation="Orientation.Vertical" VerticalGap="var(--spacingVerticalM)">
-                    <h2>Your account</h2>
-                    <p>Manage your profile, password, and sign-in options.</p>
-                    <AuthorizeView>
-                        <Authorized>
-                            <a href="Account/Manage">Manage account</a>
-                        </Authorized>
-                        <NotAuthorized>
-                            <a href="Account/Login">Log in</a>
-                            <a href="Account/Register">Create an account</a>
-                        </NotAuthorized>
-                    </AuthorizeView>
-                </FluentStack>
-            </FluentCard>
+        <FluentGridItem Xs="12" Md="5">
+            <aside class="example-notebook" aria-label="Example recipe development history">
+                <p class="eyebrow">A GLIMPSE INSIDE · EXAMPLE</p>
+                <FluentIcon Value="@(new Icons.Regular.Size48.Food())" aria-hidden="true" />
+                <h2>The vanilla project</h2><p class="muted">One question. A small change. A new discovery.</p>
+                <ol class="example-history"><li><span class="badge">V1 · THE STARTING POINT</span><p>Lovely flavor. A little too firm.</p></li><li><span class="badge">V2 · A SMALL EXPERIMENT</span><p>Try a different sugar balance.</p></li><li><span class="badge standard">V3 · THE ONE TO KEEP</span><p>Smooth, scoopable, just right.</p></li></ol>
+            </aside>
         </FluentGridItem>
     </FluentGrid>
-</div>
+</section>
+<FluentGrid Spacing="5" Class="welcome-features">
+    <FluentGridItem Xs="12" Sm="4"><section class="notebook-panel"><span class="eyebrow">01 / CAPTURE</span><h2>Keep the details</h2><p>Ingredients, exact amounts, preparation steps, and photos. Everything you need to make it again.</p></section></FluentGridItem>
+    <FluentGridItem Xs="12" Sm="4"><section class="notebook-panel"><span class="eyebrow">02 / DISCOVER</span><h2>Give taste a voice</h2><p>Your criteria, your scores, your observations. Let each tasting guide the next small experiment.</p></section></FluentGridItem>
+    <FluentGridItem Xs="12" Sm="4"><section class="notebook-panel"><span class="eyebrow">03 / REFINE</span><h2>See what made it better</h2><p>Follow the story of a recipe, compare changes, and keep a favorite as your standard.</p></section></FluentGridItem>
+</FluentGrid>

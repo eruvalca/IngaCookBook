@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Bunit;
+using IngaCookBook.Features.Account.Components;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using IngaCookBook.Features.Account.Components;
 using Shouldly;
 using Xunit;
 

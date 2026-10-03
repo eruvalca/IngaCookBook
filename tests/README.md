@@ -6,11 +6,11 @@ the CLI and editor find `global.json` and `IngaCookBook.slnx`.
 
 | Project | Scope |
 | --- | --- |
-| `IngaCookBook.UnitTests` | Account services and extensions, outcome decoding, redirects, authentication-state revalidation, Identity endpoint behavior, and service defaults. |
-| `IngaCookBook.ComponentTests` | Account sign-in and management workflows, validation, shared account components, navigation, error request IDs, and the shared UI's `Counter`, using bUnit. |
-| `IngaCookBook.IntegrationTests` | Focused in-process integration with real PostgreSQL via Testcontainers: migrations, EF/Identity stores, persistence across contexts, and dependency behavior. |
-| `IngaCookBook.AspireIntegrationTests` | The real AppHost, database/migration startup dependencies, readiness, resource endpoints, and cross-process HTTP behavior. |
-| `IngaCookBook.PlaywrightTests` | Real Chromium: Fluent icons/web components, desktop/mobile navigation, drawer behavior, counter interaction, and document continuity. |
+| `IngaCookBook.UnitTests` | Account services and extensions, outcome decoding, redirects, authentication-state revalidation, Identity endpoint behavior, service defaults, recipe comparisons, validation, photo signatures, and cost calculations. |
+| `IngaCookBook.ComponentTests` | Account workflows, shared components, navigation, error request IDs, Counter, notebook action rendering/conflicts, save-time input locking, browser-date initialization and retained selections, partial upload failures, and nested recipe sheets, using bUnit. |
+| `IngaCookBook.IntegrationTests` | Real PostgreSQL via Testcontainers: migrations, Identity, recipe lifecycles, workspace isolation, concurrency, metric deletion, saved nested formulations, account-deletion transactions, and durable photo cleanup/retries. |
+| `IngaCookBook.AspireIntegrationTests` | The real AppHost, database/migration startup dependencies, readiness, resource endpoints, cross-process HTTP behavior, and the hosted cleanup worker deleting scoped Azurite blobs/snapshots. |
+| `IngaCookBook.PlaywrightTests` | Real Chromium: desktop/mobile navigation, Fluent controls, recipe creation/editing, unsaved-editor link/history protection, browser-local batch/tasting dates under both Auto renderers, Azure-compatible photo uploads, comparison, printing, themes, and antiforgery. |
 
 `IngaCookBook.Testing` is a shared support library, not a test project. It configures
 isolated AppHost builders for the Aspire and Playwright projects.
@@ -117,6 +117,9 @@ with dynamic ports, using `postgres:18.3` to match Aspire 13.6.0. Keep the resou
 reaper enabled; do not use development connection strings or container reuse.
 For future in-process HTTP tests, `WebApplicationFactory` can be combined with
 these containers. This project does not verify AppHost wiring or browser behavior.
+Notebook tests enable Npgsql retries to match Aspire's runtime EF enrichment.
+Cleanup tests inject storage failures and control retry time; the Aspire test
+checks the actual worker and storage SDK against isolated Azurite resources.
 
 Use **Aspire integration tests** when the subject is the assembled application:
 resource references, connection injection, migrations before web startup, readiness,

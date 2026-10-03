@@ -1,0 +1,8 @@
+@inherits NotebookPage
+
+<SaveNotice Error="@Error" Status="@Status" />
+<div class="photo-upload">
+    <label for="@_inputId">Add photos (JPEG, PNG, WebP; up to 10 MB each)</label>
+    <InputFile id="@_inputId" OnChange="UploadAsync" multiple accept="image/jpeg,image/png,image/webp" disabled="@Disabled" />
+    @if (Busy) { <p role="status">Uploading photo @_uploaded…</p> }
+</div>

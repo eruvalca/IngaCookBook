@@ -2,6 +2,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using System.Text.Json;
 using Bogus;
+using IngaCookBook.Data;
+using IngaCookBook.Features.Account.Endpoints;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
@@ -13,8 +15,6 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Primitives;
 using NSubstitute;
-using IngaCookBook.Data;
-using IngaCookBook.Features.Account.Endpoints;
 using Shouldly;
 using Xunit;
 

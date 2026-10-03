@@ -1,0 +1,3 @@
+.appearance-picker { margin: var(--spacingVerticalL); }
+label { display: block; font-size: var(--fontSizeBase200); font-weight: var(--fontWeightSemibold); margin-bottom: var(--spacingVerticalS); }
+select { width: 100%; padding: var(--spacingVerticalS) var(--spacingHorizontalM); border: 1px solid var(--colorNeutralStroke1); border-radius: var(--borderRadiusMedium); background: var(--colorNeutralBackground1); color: var(--colorNeutralForeground1); }

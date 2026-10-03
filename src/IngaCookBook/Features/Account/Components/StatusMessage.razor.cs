@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Components;
 using IngaCookBook.Features.Account.Services;
+using Microsoft.AspNetCore.Components;
 
 namespace IngaCookBook.Features.Account.Components;
 

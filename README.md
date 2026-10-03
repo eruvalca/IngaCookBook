@@ -1,7 +1,9 @@
 # IngaCookBook
 
 .NET 10 Blazor application with a hosted WebAssembly client, shared UI and kernel,
-Aspire orchestration, and PostgreSQL-backed ASP.NET Core Identity.
+Aspire orchestration, PostgreSQL-backed ASP.NET Core Identity, and a recipe
+development notebook. Record ingredients and preparation, make batches, evaluate
+results, and compare experiments. See the [product guide](docs/recipe-notebook.md).
 
 ## Local prerequisites
 
@@ -22,8 +24,10 @@ root to verify the environment. The AppHost is explicitly located by the root
 Use PowerShell 7 for the scripts in this repository. From the solution root,
 run `dotnet build IngaCookBook.slnx`, then `aspire run`. The first build/start may
 restore NuGet packages, download Aspire/EF tooling, and pull container images.
-The initial migration creates an empty Identity schema; no accounts or local
-credentials are included. Git initialization is optional and separate.
+Migrations create the Identity and recipe notebook schemas; no accounts, recipes,
+or local credentials are included. Register and confirm an account using the
+development confirmation link, sign in, then create a workspace at `/workspace`.
+Git initialization is optional and separate.
 
 If this solution was generated, `.template-provenance.json` records its template
 version and source commit. It is an independent snapshot: template updates do not
@@ -39,7 +43,7 @@ and volume together if preserving development data.
 ## Run through Aspire
 
 Aspire is the default entry point for running and debugging the application. It
-starts PostgreSQL, applies migrations, supplies configuration, and starts the web
+starts PostgreSQL and Azurite, applies migrations, supplies configuration, and starts the web
 project. The hosted WebAssembly client runs through that web project.
 
 For interactive development, run from the repository root:
@@ -159,8 +163,11 @@ CSS bundle; do not add a second link to that bundle. `no-fuib-style` on the body
 prevents Fluent's initializer from adopting another copy of the baseline after
 the application overrides. The package's Blazor JavaScript initializer loads the
 web components automatically, including static layout hamburger behavior. Do not
-add a v4 web-components script or `FluentDesignTheme`. The body selects a light
-theme and application styles use v5 CSS design tokens with fallback values.
+add a v4 web-components script or `FluentDesignTheme`. Appearance defaults to the
+system preference and offers explicit light and dark modes. A small head script
+selects the initial mode before painting; the shared initializer applies the
+pinned v5 brand palette and updates pickers after enhanced navigation. Application
+styles use v5 CSS design tokens.
 
 The shell uses `FluentLayout`, `FluentNav`, and `FluentNavItem`; the home, counter,
 and authenticated pages use Fluent cards and buttons with native content links.
@@ -230,6 +237,8 @@ postgres (PostgreSQL 18.3, managed data volume)
   │    └─ ingacookbook-migrations (EF database update)
   │         └─ ingacookbook (Blazor server + hosted WebAssembly)
   └─ pgadmin (explicit start)
+photostorage (Azurite in local run mode, managed data volume)
+  └─ recipephotos (private blobs consumed by ingacookbook)
 ```
 
 After a normal startup, these dashboard states are expected:
@@ -237,6 +246,7 @@ After a normal startup, these dashboard states are expected:
 | Resource | Expected state | Meaning |
 | --- | --- | --- |
 | `postgres`, `ingacookbookdb` | Running / Healthy | PostgreSQL and the application database are ready. |
+| `photostorage`, `recipephotos` | Running / Healthy | Azure Blob-compatible photo storage is available locally. |
 | `ingacookbook-migrations` | Finished | The one-shot migration command completed successfully. It is not a long-running service. |
 | `ingacookbook` | Running / Healthy | The web application is ready and its database readiness check passes. |
 | `pgadmin` | Not started | Optional database UI; start it when needed. |
@@ -257,6 +267,47 @@ tool. The application uses Npgsql EF Core 10.0.3, EF Core 10.0.12, and Aspire's
 Npgsql EF integration 13.6.0. Its non-pooled `IDbContextFactory<ApplicationDbContext>`
 supports a context per Blazor operation; Identity can still resolve the scoped
 context. Dispose factory-created contexts with `await using`.
+
+## Recipe photos and Azure Storage
+
+The AppHost models `photostorage` with `Aspire.Hosting.Azure.Storage` 13.6.0 and
+`recipephotos` as its blob service. Run mode uses Azurite with a managed data
+volume and session lifetime. Aspire supplies `ConnectionStrings:recipephotos`;
+the application registers `BlobServiceClient` with the matching Aspire client
+integration. Photos persist across ordinary local restarts. Tests remove volume
+mounts from all resources, including the storage emulator, before starting.
+
+The app creates the private `recipe-photos` container on its first upload. Keys
+contain workspace, recipe, version, and photo GUIDs; filenames are display
+captions only. Authenticated minimal API routes stream the bytes after checking
+ownership. No public container access, browser credentials, or permanent SAS
+links are used. JPEG/PNG/WebP signatures and the 10 MiB per-file limit are checked
+server-side. A rejected metadata save compensates by deleting only that upload.
+Expected Azure failures return a recoverable save error. If Azure's upload result
+is uncertain or immediate compensation fails, that unique blob key is queued for
+cleanup without affecting earlier successful uploads.
+
+Account deletion commits the Identity/database cascade and a `PhotoCleanupJobs`
+entry in one EF transaction, using the configured execution strategy. The job
+survives deletion of its workspace. The hosted cleanup worker processes up to 20
+due jobs at startup and once per minute, deleting blobs and snapshots only under
+each queued prefix. Storage failures defer the job for another minute; transient
+database failures leave jobs queued. Successful jobs are removed. Inspect worker
+warning events 2100/2101 for deferred cleanup. Account deletion does not wait for
+Azure; photos become inaccessible through the app immediately and bytes are
+removed when storage is available. `DurablePhotoCleanup` adds the queue table
+through the existing migration startup dependency.
+
+For a cloud deployment, configure the Azure storage resource/service connection
+and grant the application identity blob data access, including listing and deleting
+blobs/snapshots and creating the container (or provision it separately). Keep
+credentials outside source.
+The emulator is local only; these changes do not deploy any Azure resources.
+Database and blob backups must be retained together. Azure retention/versioning
+and backup policies govern retained copies separately from application deletion.
+This first release has no individual photo-deletion UI or general orphan scan;
+unexpected failures that prevent recording a cleanup job can still require
+operational cleanup.
 
 Identity schema version 3 is retained, including the `AspNetUserPasskeys` table.
 Development registration uses the existing no-op email sender: follow the confirmation
@@ -304,8 +355,10 @@ aspire logs ingacookbook-migrations --non-interactive
 ```
 
 The built-in **Remove Migration**, **Drop Database**, and **Reset Database** commands
-are also available. Drop/reset delete local application data; use them only when
-that is intended. There is no application-startup migration routine or custom worker.
+are also available. In this pinned integration, **Remove Migration** invokes EF
+with `--force` and can revert an applied migration and delete its data. Treat all
+three as destructive operations requiring explicit intent. There is no
+application-startup migration routine or custom worker.
 See [Aspire's EF migration integration](https://aspire.dev/integrations/databases/efcore/migrations/).
 
 ## Health, telemetry, and pgAdmin

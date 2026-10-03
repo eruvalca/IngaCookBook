@@ -1,5 +1,7 @@
 using System.Text.Encodings.Web;
 using Bunit;
+using IngaCookBook.Data;
+using IngaCookBook.Features.Account.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -9,8 +11,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.FluentUI.AspNetCore.Components;
 using NSubstitute;
-using IngaCookBook.Data;
-using IngaCookBook.Features.Account.Services;
 
 namespace IngaCookBook.ComponentTests.Features.Account;
 

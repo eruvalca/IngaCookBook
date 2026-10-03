@@ -1,0 +1,10 @@
+<li>
+    <a href="@($"/recipes/{Recipe.Id}/versions/{Version.Id}")"><strong>V@(Version.Number)</strong> · @Version.Content.Label</a>
+    @if (Recipe.StandardVersionId == Version.Id) { <span class="badge standard">Standard</span> }
+    @if (!string.IsNullOrWhiteSpace(Version.Content.Hypothesis)) { <p class="muted">@Version.Content.Hypothesis</p> }
+    @if (Children.Count > 0)
+    {
+        <ul>@foreach (var child in Children) { <BranchNode Recipe="Recipe" Version="child" @key="child.Id" /> }</ul>
+    }
+</li>
+

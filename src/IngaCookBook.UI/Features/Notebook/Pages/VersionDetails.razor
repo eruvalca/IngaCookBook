@@ -1,0 +1,73 @@
+@page "/recipes/{RecipeId:guid}/versions/{VersionId:guid}"
+@attribute [Authorize]
+@inherits NotebookPage
+
+<PageTitle>@(_recipe?.Name ?? "Version") · IngaCookBook</PageTitle>
+<a class="back-link" href="@($"/recipes/{RecipeId}")">← Recipe history</a>
+<SaveNotice Error="@Error" />
+@if (_recipe is not null && _version is not null)
+{
+    <p class="eyebrow">@_recipe.Name · VERSION @_version.Number</p><h1>@_version.Content.Label</h1>
+    <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)">
+        <span class="badge">@(_version.IsLocked ? "Preserved version" : "Draft")</span>
+        @if (_recipe.StandardVersionId == VersionId) { <span class="badge standard">Current standard</span> }
+        @if (_version.ParentId is not null) { <a href="@($"/recipes/{RecipeId}/versions/{_version.ParentId}")">View starting version</a> }
+        <a href="@($"/recipes/{RecipeId}/versions/{VersionId}/print")">Print recipe</a>
+        <a href="@($"/recipes/{RecipeId}/compare?right={VersionId}&left={_version.ParentId}")">Compare changes</a>
+    </FluentStack>
+    <VersionActions RecipeId="RecipeId" VersionId="VersionId" Revision="_recipe.Revision" Locked="_version.IsLocked" IsStandard="@(_recipe.StandardVersionId == VersionId)" @rendermode="InteractiveAuto" />
+    @if (!string.IsNullOrWhiteSpace(_version.Content.Hypothesis))
+    {
+        <section class="experiment-summary"><span class="eyebrow">THE QUESTION BEHIND THIS VERSION</span><p>@_version.Content.Hypothesis</p>
+            @if (_recipe.Metrics.FirstOrDefault(m => m.Id == _version.Content.TargetMetricId) is { } metric) { <p>Focus: <strong>@metric.Name</strong></p> }
+            @if (!string.IsNullOrWhiteSpace(_version.Content.RelatedChanges)) { <p class="muted">Related changes: @_version.Content.RelatedChanges</p> }
+        </section>
+    }
+    <article class="notebook-panel recipe-sheet"><RecipeSheet Content="_version.Content" /></article>
+    <section class="notebook-panel">
+        <h2>Ingredient cost</h2><p><strong>@_currency @_cost.KnownTotal.ToString("0.00")</strong> @(_cost.MissingCount == 0 ? "estimated ingredient cost" : "known ingredient cost")</p>
+        @if (_cost.MissingCount > 0) { <p class="muted">Incomplete estimate: @_cost.MissingCount ingredient(s) are unpriced or use incompatible units.</p> }
+    </section>
+    <section class="notebook-panel">
+        <h2>Photos</h2><p class="muted">Capture the texture, the finish, and the details you want to remember.</p>
+        <FluentGrid Spacing="4">
+            @foreach (var photo in _version.Photos)
+            {
+                <FluentGridItem Xs="6" Sm="4" @key="photo.Id"><figure class="recipe-photo"><a href="@PhotoUrl(photo.Id)" target="_blank" rel="noopener"><img src="@PhotoUrl(photo.Id)" alt="@photo.Caption" loading="lazy" /></a><figcaption>@photo.Caption</figcaption></figure></FluentGridItem>
+            }
+        </FluentGrid>
+        <PhotoUpload RecipeId="RecipeId" VersionId="VersionId" @rendermode="InteractiveAuto" />
+    </section>
+    <section class="notebook-panel">
+        <h2>Batches &amp; tastings</h2><p>@_version.Batches.Count batches · @_version.Batches.Sum(b => b.Evaluations.Count) evaluations</p>
+        @foreach (var batch in _version.Batches.OrderByDescending(b => b.MadeAt))
+        {
+            <details class="batch-history"><summary>Batch made @batch.MadeAt.ToString("MMM d, yyyy") · @batch.Evaluations.Count tastings</summary>
+                <p class="preserve-lines">@batch.Notes</p>
+                @foreach (var evaluation in batch.Evaluations.OrderByDescending(e => e.TastedAt))
+                {
+                    <article class="evaluation-entry"><h3>Tasted @evaluation.TastedAt.ToString("MMM d, yyyy")</h3>
+                        <dl class="score-list">@foreach (var metric in _recipe.Metrics) { var score = evaluation.Scores.FirstOrDefault(s => s.MetricId == metric.Id); <dt>@metric.Name: <strong>@(score?.Score?.ToString() ?? "Not scored")</strong></dt><dd>@score?.Notes</dd> }</dl>
+                        <p class="preserve-lines">@evaluation.Notes</p>
+                        @if (!string.IsNullOrWhiteSpace(evaluation.NextIdea)) { <p><strong>Next idea:</strong> @evaluation.NextIdea</p> }
+                    </article>
+                }
+            </details>
+        }
+        <a class="action-link primary" href="@($"/recipes/{RecipeId}/versions/{VersionId}/batches")">Make a batch or add a tasting</a>
+    </section>
+    @if (_version.Corrections.Count > 0)
+    {
+        <section class="notebook-panel"><h2>Corrections to this record</h2>
+            @foreach (var correction in _version.Corrections)
+            {
+                <details><summary>@correction.CorrectedAt.ToString("MMM d, yyyy") · @correction.Reason</summary><h3>Content before this correction</h3><RecipeSheet Content="correction.PreviousContent" /></details>
+            }
+        </section>
+    }
+    @if (_recipe.Standards.Any(s => s.VersionId == VersionId))
+    {
+        <p class="muted">Selected as standard: @string.Join(", ", _recipe.Standards.Where(s => s.VersionId == VersionId).Select(s => s.SelectedAt.ToString("MMM d, yyyy")))</p>
+    }
+}
+else if (!Busy && Error is null) { <h1>Version not found</h1> }

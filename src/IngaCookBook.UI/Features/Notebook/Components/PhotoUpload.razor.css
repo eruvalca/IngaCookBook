@@ -1,0 +1,3 @@
+.photo-upload { padding-block: var(--spacingVerticalL); }
+.photo-upload label { display: block; font-weight: var(--fontWeightSemibold); margin-bottom: var(--spacingVerticalM); }
+.photo-upload input { width: 100%; }

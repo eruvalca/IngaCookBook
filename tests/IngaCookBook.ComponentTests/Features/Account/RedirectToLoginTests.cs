@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Bunit;
 using Bunit.TestDoubles;
+using IngaCookBook.UI.Features.Account.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
-using IngaCookBook.UI.Features.Account.Components;
 using Shouldly;
 using Xunit;
 

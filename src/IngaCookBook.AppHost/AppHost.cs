@@ -4,9 +4,14 @@ var postgres = builder.AddPostgres("postgres")
     .WithDataVolume()
     .WithRepl();
 var database = postgres.AddDatabase("ingacookbookdb", "ingacookbook");
+var blobs = builder.AddAzureStorage("photostorage")
+    .RunAsEmulator(emulator => emulator.WithDataVolume())
+    .AddBlobs("recipephotos");
 
 var web = builder.AddProject<Projects.IngaCookBook>("ingacookbook")
     .WithReference(database)
+    .WithReference(blobs)
+    .WaitFor(blobs)
     .WaitFor(database)
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health");
@@ -16,6 +21,7 @@ var web = builder.AddProject<Projects.IngaCookBook>("ingacookbook")
 var migrations = web.AddEFMigrations("ingacookbook-migrations", "IngaCookBook.Data.ApplicationDbContext",
         tool => tool.WithToolVersion("10.0.12"))
     .WithReference(database)
+    .WithReference(blobs)
     .WaitFor(database)
     // EF constructs the web host at design time but does not serve HTTP. Avoid inherited DCP endpoint tokens.
     .WithEnvironment("ASPNETCORE_URLS", "http://127.0.0.1:0")

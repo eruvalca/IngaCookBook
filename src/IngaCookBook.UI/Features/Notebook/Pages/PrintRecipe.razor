@@ -1,0 +1,17 @@
+@page "/recipes/{RecipeId:guid}/versions/{VersionId:guid}/print"
+@attribute [Authorize]
+@inherits NotebookPage
+
+<PageTitle>@(_recipe?.Name ?? "Print recipe") · IngaCookBook</PageTitle>
+<div class="no-print"><a class="back-link" href="@($"/recipes/{RecipeId}/versions/{VersionId}")">← Version details</a><p><button type="button" data-print-recipe>Print recipe</button></p></div>
+<SaveNotice Error="@Error" />
+@if (_recipe is not null && _version is not null)
+{
+    <article class="print-sheet">
+        <p class="eyebrow">INGACOOKBOOK · @_workspace?.Name</p>
+        <h1>@_recipe.Name</h1><p>Version @_version.Number · @_version.Content.Label</p>
+        <p>@_recipe.Description</p><hr />
+        <RecipeSheet Content="_version.Content" ExpandNested="true" />
+    </article>
+}
+else if (!Busy && Error is null) { <h1>Version not found</h1> }

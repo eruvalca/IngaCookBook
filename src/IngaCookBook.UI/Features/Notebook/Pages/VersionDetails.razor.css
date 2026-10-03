@@ -1,0 +1,5 @@
+.experiment-summary { background: var(--colorBrandBackground2); border-left: 3px solid var(--colorBrandStroke1); padding: var(--spacingVerticalL); margin-block: var(--spacingVerticalXL); }
+.recipe-photo { margin: 0; }
+.recipe-photo img { width: 100%; height: 12rem; object-fit: cover; border-radius: var(--borderRadiusLarge); }
+.recipe-photo figcaption { font-size: var(--fontSizeBase200); padding-top: var(--spacingVerticalS); }
+.batch-history { border-top: 1px solid var(--colorNeutralStroke2); padding-block: var(--spacingVerticalM); }

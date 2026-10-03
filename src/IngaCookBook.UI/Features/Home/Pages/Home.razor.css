@@ -1,13 +1,10 @@
-.home-content ::deep .home-cards {
-    margin-top: var(--spacingVerticalXXL);
-}
-
-.home-content ::deep .home-cards .fluent-card {
-    min-width: 0;
-    height: 100%;
-    padding: var(--spacingVerticalXXL) var(--spacingHorizontalXXL);
-}
-
-h2, p {
-    margin: 0;
-}
+.welcome-hero { padding-block: clamp(1rem, 5vw, 4rem); }
+.welcome-hero h1 { font-family: Georgia, 'Times New Roman', serif; font-weight: 500; font-size: clamp(2.75rem, 6vw, 5rem); letter-spacing: -0.045em; line-height: 1.05; }
+.welcome-hero .lede { max-width: 35rem; margin-block: var(--spacingVerticalXXL); }
+.welcome-footnote { margin-top: var(--spacingVerticalXXL); font-size: var(--fontSizeBase200); color: var(--colorNeutralForeground2); }
+.example-notebook { padding: clamp(1.25rem, 3vw, 2.25rem); border-radius: var(--borderRadiusXLarge); background: var(--colorBrandBackground2); border: 1px solid var(--colorBrandStroke2); box-shadow: var(--shadow8); transform: rotate(-1deg); }
+.example-notebook h2 { font-family: Georgia, 'Times New Roman', serif; font-size: 2rem; font-weight: 500; margin-top: var(--spacingVerticalL); }
+.example-history { list-style: none; padding: 0; margin: 0; }
+.example-history li { border-left: 2px solid var(--colorBrandStroke2); padding: var(--spacingVerticalM) var(--spacingHorizontalL); }
+.example-history p { margin-block: var(--spacingVerticalS) 0; }
+.welcome-features { margin-block: var(--spacingVerticalXXL); }

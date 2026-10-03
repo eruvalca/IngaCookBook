@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Encodings.Web;
+using IngaCookBook.Data;
+using IngaCookBook.Features.Account.Extensions;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.Identity;
-using IngaCookBook.Data;
-using IngaCookBook.Features.Account.Extensions;
 
 namespace IngaCookBook.Features.Account.Pages;
 

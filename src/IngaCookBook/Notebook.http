@@ -1,0 +1,30 @@
+# Use the HTTPS endpoint from `aspire describe` and your HTTP client's authenticated cookie jar.
+@host = https://ingacookbook.dev.localhost:REPLACE_WITH_CURRENT_PORT
+@recipeId = REPLACE_WITH_RECIPE_ID
+@token = REPLACE_WITH_TOKEN_FROM_AUTHENTICATED_GET
+
+### Development schema
+GET {{host}}/openapi/v1.json
+
+### Obtain a token before mutations; retain the antiforgery cookie.
+GET {{host}}/api/notebook/token
+
+### Current workspace
+GET {{host}}/api/notebook/workspace
+
+### Create a workspace
+POST {{host}}/api/notebook/workspace
+Content-Type: application/json
+RequestVerificationToken: {{token}}
+
+{"name":"My test kitchen","currency":"USD"}
+
+### Start a recipe with an initial draft
+POST {{host}}/api/notebook/recipes
+Content-Type: application/json
+RequestVerificationToken: {{token}}
+
+{"name":"Vanilla","description":"Smooth and scoopable","metrics":["Flavor","Texture"]}
+
+### Get revision, versions, metric IDs, batches, and evaluations
+GET {{host}}/api/notebook/recipes/{{recipeId}}

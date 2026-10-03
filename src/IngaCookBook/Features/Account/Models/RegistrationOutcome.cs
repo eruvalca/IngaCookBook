@@ -1,6 +1,6 @@
+using IngaCookBook.Data;
 using Microsoft.AspNetCore.Identity;
 using OneOf;
-using IngaCookBook.Data;
 
 namespace IngaCookBook.Features.Account.Models;
 

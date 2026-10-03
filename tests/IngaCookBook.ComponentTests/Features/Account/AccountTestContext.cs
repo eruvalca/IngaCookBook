@@ -1,9 +1,9 @@
 using Bunit;
+using IngaCookBook.Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
-using IngaCookBook.Data;
 
 namespace IngaCookBook.ComponentTests.Features.Account;
 

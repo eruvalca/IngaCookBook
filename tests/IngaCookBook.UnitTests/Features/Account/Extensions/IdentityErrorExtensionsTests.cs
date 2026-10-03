@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-using Microsoft.AspNetCore.Identity;
 using IngaCookBook.Features.Account.Extensions;
+using Microsoft.AspNetCore.Identity;
 using Shouldly;
 using Xunit;
 

@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using Bogus;
 using Bunit;
+using IngaCookBook.UI.Layout;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.FluentUI.AspNetCore.Components;
-using IngaCookBook.UI.Layout;
 using Shouldly;
 using Xunit;
 

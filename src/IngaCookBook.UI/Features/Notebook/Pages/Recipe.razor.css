@@ -1,0 +1,5 @@
+.version-timeline { list-style: none; padding-left: var(--spacingHorizontalXXL); border-left: 2px solid var(--colorBrandStroke2); }
+.version-timeline > li { position: relative; }
+.version-timeline > li::before { content: ''; position: absolute; left: -1.65rem; top: 1.5rem; width: 0.65rem; height: 0.65rem; background: var(--colorBrandBackground); border-radius: var(--borderRadiusCircular); }
+.standard-banner { background: var(--colorBrandBackground2); border: 1px solid var(--colorBrandStroke2); padding: clamp(1.25rem, 3vw, 2rem); border-radius: var(--borderRadiusXLarge); margin-block: var(--spacingVerticalXXL); }
+.recipe-tree { list-style: none; padding: var(--spacingVerticalL); }

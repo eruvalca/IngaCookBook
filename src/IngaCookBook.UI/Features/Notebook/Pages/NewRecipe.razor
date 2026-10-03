@@ -1,0 +1,35 @@
+@page "/recipes/new"
+@attribute [Authorize]
+@rendermode InteractiveAuto
+@inherits NotebookPage
+
+<PageTitle>New recipe · IngaCookBook</PageTitle>
+<a class="back-link" href="/recipes">← Recipe library</a>
+<p class="eyebrow">START WITH AN IDEA</p><h1>What are we making?</h1>
+<p class="lede">A familiar favorite or something entirely new. Every great recipe starts somewhere.</p>
+<SaveNotice Error="@Error" />
+@if (_hasWorkspace)
+{
+    <FluentStack Orientation="Orientation.Vertical" VerticalGap="var(--spacingVerticalL)" Class="notebook-panel editor-form">
+        <FluentTextInput Disabled="@Disabled" Label="Recipe name" @bind-Value="_name" MaxLength="200" Placeholder="e.g. Brown butter vanilla ice cream" />
+        <FluentTextArea Disabled="@Disabled" Label="About this recipe" @bind-Value="_description" Placeholder="What do you want this recipe to be?" />
+        <h2>What makes it good?</h2><p>Choose the qualities you want to evaluate. Each gets a 1–10 score, where 10 is best, and optional notes.</p>
+        @foreach (var metric in _metrics)
+        {
+            <FluentStack @key="metric.Id" VerticalAlignment="VerticalAlignment.Bottom" HorizontalGap="var(--spacingHorizontalM)">
+                <FluentTextInput Disabled="@Disabled" Label="Evaluation metric" @bind-Value="metric.Name" MaxLength="100" />
+                <FluentButton OnClick="@(() => _metrics.Remove(metric))" Disabled="@Disabled">Remove</FluentButton>
+            </FluentStack>
+        }
+        <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)">
+            <FluentButton OnClick="AddMetric" Disabled="@Disabled" IconStart="@(new Icons.Regular.Size20.Add())">Add metric</FluentButton>
+            <FluentButton OnClick="UseIceCreamMetrics" Disabled="@Disabled">Use ice cream starter metrics</FluentButton>
+        </FluentStack>
+        <FluentButton OnClick="CreateAsync" Disabled="@Disabled" Appearance="ButtonAppearance.Primary">Create recipe &amp; first version</FluentButton>
+    </FluentStack>
+}
+else if (_loaded)
+{
+    <p>Create a workspace before adding recipes.</p><a href="/workspace" class="action-link primary">Create workspace</a>
+}
+<FluentProviders />

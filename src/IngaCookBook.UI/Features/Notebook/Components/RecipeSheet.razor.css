@@ -1,0 +1,6 @@
+.ingredient-list { list-style: none; padding: 0; }
+.ingredient-list li { padding-block: var(--spacingVerticalM); border-bottom: 1px solid var(--colorNeutralStroke2); }
+.ingredient-list strong { font-variant-numeric: tabular-nums; margin-right: var(--spacingHorizontalS); }
+.preparation-list { padding-left: var(--spacingHorizontalXL); }
+.preparation-list li { padding-left: var(--spacingHorizontalS); margin-bottom: var(--spacingVerticalL); }
+.preparation-list li::marker { color: var(--colorBrandForeground1); font-weight: var(--fontWeightSemibold); }

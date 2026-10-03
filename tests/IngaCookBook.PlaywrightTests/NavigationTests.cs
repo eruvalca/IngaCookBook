@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting.Testing;
-using Microsoft.Playwright;
 using IngaCookBook.Testing;
+using Microsoft.Playwright;
 using Shouldly;
 using Xunit;
 
@@ -50,15 +50,21 @@ public sealed class NavigationTests(ITestOutputHelper output)
         var errors = new ConcurrentQueue<string>();
         page.PageError += (_, error) => errors.Enqueue(error);
         await page.GotoAsync("/");
-        await page.GetByRole(AriaRole.Heading, new() { Name = "Welcome to IngaCookBook", Exact = true }).WaitForAsync();
+        await page.GetByRole(AriaRole.Heading, new() { Name = "A little better, every batch.", Exact = true }).WaitForAsync();
         await page.WaitForFunctionAsync("() => customElements.get('fluent-button') && typeof Blazor !== 'undefined'");
         var origin = await page.EvaluateAsync<double>("performance.timeOrigin");
 
         await OpenNavigationAsync(page, width);
-        var counter = page.GetByRole(AriaRole.Link, new() { Name = "Counter", Exact = true });
-        await counter.Locator("svg").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
-        (await counter.Locator("svg").CountAsync()).ShouldBeGreaterThan(0);
-        await counter.ClickAsync();
+        var register = page.GetByRole(AriaRole.Link, new() { Name = "Register", Exact = true });
+        await register.Locator("svg").First.WaitForAsync(new() { State = WaitForSelectorState.Attached });
+        (await register.Locator("svg").CountAsync()).ShouldBeGreaterThan(0);
+        await register.ClickAsync();
+        await page.GetByRole(AriaRole.Heading, new() { Name = "Create a new account.", Exact = true }).WaitForAsync();
+        (await page.EvaluateAsync<double>("performance.timeOrigin")).ShouldBe(origin);
+        await AssertDrawerClosedAsync(page, width);
+        // The scaffold counter remains available as an isolated renderer diagnostic.
+        await page.GotoAsync("/counter");
+        origin = await page.EvaluateAsync<double>("performance.timeOrigin");
         // A Fluent button's shadow button can exist before Blazor hydrates its host.
         await page.Locator("fluent-button:not([disabled])").Filter(new() { HasText = "Click me" }).WaitForAsync();
         var increment = page.GetByRole(AriaRole.Button, new() { Name = "Click me", Exact = true });
@@ -70,7 +76,7 @@ public sealed class NavigationTests(ITestOutputHelper output)
 
         await OpenNavigationAsync(page, width);
         await page.GetByRole(AriaRole.Link, new() { Name = "Home", Exact = true }).ClickAsync();
-        await page.GetByRole(AriaRole.Heading, new() { Name = "Welcome to IngaCookBook", Exact = true }).WaitForAsync();
+        await page.GetByRole(AriaRole.Heading, new() { Name = "A little better, every batch.", Exact = true }).WaitForAsync();
         (await page.EvaluateAsync<double>("performance.timeOrigin")).ShouldBe(origin);
         await AssertDrawerClosedAsync(page, width);
         (await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth")).ShouldBeTrue();

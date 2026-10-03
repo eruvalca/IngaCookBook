@@ -15,13 +15,15 @@ public static class TestAppHost
         {
             // Never attach tests to development data. Preserve the real resource graph,
             // health checks and migration dependencies, but use disposable storage.
+            foreach (var resource in builder.Resources)
+            {
+                foreach (var mount in resource.Annotations.OfType<ContainerMountAnnotation>().ToArray())
+                {
+                    resource.Annotations.Remove(mount);
+                }
+            }
             foreach (var container in builder.Resources.OfType<ContainerResource>())
             {
-                foreach (var mount in container.Annotations.OfType<ContainerMountAnnotation>().ToArray())
-                {
-                    container.Annotations.Remove(mount);
-                }
-
                 builder.CreateResourceBuilder(container).WithLifetime(ContainerLifetime.Session);
             }
 

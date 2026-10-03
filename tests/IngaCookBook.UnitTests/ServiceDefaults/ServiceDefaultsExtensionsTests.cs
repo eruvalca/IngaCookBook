@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using IngaCookBook.ServiceDefaults;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -9,7 +10,6 @@ using Microsoft.Extensions.Options;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
-using IngaCookBook.ServiceDefaults;
 using Shouldly;
 using Xunit;
 using ServiceDefaultsApi = IngaCookBook.ServiceDefaults.Extensions;

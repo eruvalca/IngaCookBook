@@ -1,12 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using Bunit;
+using IngaCookBook.Features.Account.Models;
+using IngaCookBook.Features.Account.Pages.Manage;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using IngaCookBook.Features.Account.Models;
-using IngaCookBook.Features.Account.Pages.Manage;
 using Shouldly;
 using Xunit;
 

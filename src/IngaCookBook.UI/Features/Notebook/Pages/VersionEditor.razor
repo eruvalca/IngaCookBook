@@ -1,0 +1,114 @@
+@page "/recipes/{RecipeId:guid}/versions/{VersionId:guid}/edit"
+@attribute [Authorize]
+@rendermode InteractiveAuto
+@inherits NotebookPage
+
+<PageTitle>Edit version · IngaCookBook</PageTitle>
+<NavigationLock OnBeforeInternalNavigation="BeforeNavigateAsync" />
+<div @ref="_editor" data-notebook-editor>
+<a class="back-link" href="@($"/recipes/{RecipeId}/versions/{VersionId}")">← Version details</a>
+<SaveNotice Error="@Error" Status="@Status" />
+@if (_recipe is not null && _version is not null)
+{
+    <p class="eyebrow">@_recipe.Name · VERSION @_version.Number</p>
+    <h1>@(_version.IsLocked ? "Correct the record" : "Shape your next discovery")</h1>
+    @if (_version.IsLocked)
+    {
+        <p class="notice" data-kind="information">This version is preserved. For a new experiment, try a variation. Corrections retain the previous content and your explanation.</p>
+        <FluentTextArea Disabled="@EditorDisabled" Label="What are you correcting, and why?" @bind-Value="_correctionReason" />
+    }
+    <FluentGrid Spacing="6">
+        <FluentGridItem Xs="12" Md="4" Justify="JustifyContent.FlexStart">
+            <aside class="experiment-panel notebook-panel editor-form">
+                <span class="eyebrow">ONE QUESTION AT A TIME</span><h2>Keep your experiment focused</h2>
+                <p>Choose what you want to learn. Smaller changes make the results easier to understand.</p>
+                <FluentSelect Disabled="@EditorDisabled" TOption="MetricOption" TValue="string" Label="Metric to improve" Items="MetricOptions" OptionText="@(m => m.Name)" OptionValue="@(m => m.Id)" @bind-Value="_draft.TargetMetric" />
+                <FluentTextArea Disabled="@EditorDisabled" Label="What are you testing?" @bind-Value="_draft.Hypothesis" Placeholder="If I increase the aging time, will the texture improve?" />
+                @if (_parent is not null)
+                {
+                    <h3>@Changes.Count changes from V@(_parent.Number)</h3>
+                    @if (Changes.Count == 0) { <p class="muted">Your ingredients and preparation still match the starting version.</p> }
+                    <ul class="change-summary">@foreach (var change in Changes) { <li><strong>@change.Label</strong><br />@change.Before → @change.After</li> }</ul>
+                    @if (Changes.Count > 1)
+                    {
+                        <p class="notice" data-kind="warning">Several things changed. Consider separate variations to learn what helped.</p>
+                        <FluentTextArea Disabled="@EditorDisabled" Label="How do these changes belong together?" @bind-Value="_draft.RelatedChanges" Placeholder="For example: replacing part of one sugar with another." />
+                    }
+                }
+                else { <p class="muted">This is your baseline. Future variations will show exactly what changed here.</p> }
+            </aside>
+        </FluentGridItem>
+        <FluentGridItem Xs="12" Md="8">
+            <FluentStack Orientation="Orientation.Vertical" VerticalGap="var(--spacingVerticalXXL)" Class="editor-form">
+                <section class="notebook-panel">
+                    <FluentTextInput Disabled="@EditorDisabled" Label="Version label" @bind-Value="_draft.Label" MaxLength="200" />
+                    <FluentTextArea Disabled="@EditorDisabled" Label="Recipe notes" @bind-Value="_draft.Notes" />
+                </section>
+                <section class="notebook-panel">
+                    <h2>Ingredients</h2><p class="muted">Exactly what goes in. Include brands or preparation details in the name.</p>
+                    @foreach (var ingredient in _draft.Ingredients)
+                    {
+                        <div class="ingredient-editor" @key="ingredient.Id">
+                            <FluentTextInput Disabled="@EditorDisabled" Label="Ingredient name" @bind-Value="ingredient.Name" MaxLength="300" />
+                            <FluentGrid Spacing="3">
+                                <FluentGridItem Xs="6"><FluentNumberInput Disabled="@EditorDisabled" TValue="decimal?" Culture="_quantityCulture" Step="0" Label="Amount" @bind-Value="ingredient.Quantity" /></FluentGridItem>
+                                <FluentGridItem Xs="6"><FluentSelect Disabled="@EditorDisabled" TOption="string" TValue="string" Label="Unit" Items="RecipeCosting.Units" @bind-Value="ingredient.Unit" /></FluentGridItem>
+                            </FluentGrid>
+                            <details><summary>Purchase cost or linked recipe</summary>
+                                <FluentStack Orientation="Orientation.Vertical" VerticalGap="var(--spacingVerticalM)">
+                                    <FluentSelect Disabled="@EditorDisabled" TOption="LinkOption" TValue="string" Label="Use a preserved recipe version" Items="_links" OptionText="@(l => l.Label)" OptionValue="@(l => l.Value)" Value="ingredient.Link" ValueChanged="@(value => SetLink(ingredient, value))" />
+                                    <FluentGrid Spacing="3">
+                                        <FluentGridItem Xs="6"><FluentNumberInput Disabled="@EditorDisabled" TValue="decimal?" Culture="_quantityCulture" Step="0" Label="Purchased amount" @bind-Value="ingredient.PurchaseQuantity" /></FluentGridItem>
+                                        <FluentGridItem Xs="6"><FluentSelect Disabled="@EditorDisabled" TOption="string" TValue="string" Label="Purchased unit" Items="RecipeCosting.Units" @bind-Value="ingredient.PurchaseUnit" /></FluentGridItem>
+                                        <FluentGridItem Xs="12"><FluentNumberInput Disabled="@EditorDisabled" TValue="decimal?" Label="@($"Purchase price ({_currency})")" @bind-Value="ingredient.PurchasePrice" /></FluentGridItem>
+                                    </FluentGrid>
+                                    <p class="muted">Leave prices blank if unknown. Linked recipes use their saved ingredients and yield. Volume units marked US use US measures.</p>
+                                </FluentStack>
+                            </details>
+                            <FluentButton Appearance="ButtonAppearance.Subtle" OnClick="@(() => _draft.Ingredients.Remove(ingredient))" Disabled="@EditorDisabled">Remove ingredient</FluentButton>
+                        </div>
+                    }
+                    <FluentButton OnClick="AddIngredient" Disabled="@EditorDisabled" IconStart="@(new Icons.Regular.Size20.Add())">Add ingredient</FluentButton>
+                </section>
+                <section class="notebook-panel">
+                    <h2>Preparation</h2><p class="muted">Write the steps in order. Temperatures, timing, equipment—anything that helps make it again.</p>
+                    @foreach (var step in _draft.Steps)
+                    {
+                        var index = _draft.Steps.IndexOf(step);
+                        <div class="step-editor" @key="step.Id">
+                            <FluentTextArea Disabled="@EditorDisabled" Label="@($"Step {index + 1}")" @bind-Value="step.Instruction" />
+                            <FluentTextInput Disabled="@EditorDisabled" Label="Step notes (optional)" @bind-Value="step.Notes" />
+                            <FluentStack HorizontalGap="var(--spacingHorizontalS)" Wrap="true">
+                                <FluentButton OnClick="@(() => MoveStep(index, -1))" Disabled="@(Disabled || index == 0)">Move up</FluentButton>
+                                <FluentButton OnClick="@(() => MoveStep(index, 1))" Disabled="@(Disabled || index == _draft.Steps.Count - 1)">Move down</FluentButton>
+                                <FluentButton OnClick="@(() => _draft.Steps.Remove(step))" Disabled="@EditorDisabled">Remove step</FluentButton>
+                            </FluentStack>
+                        </div>
+                    }
+                    <FluentButton OnClick="AddStep" Disabled="@EditorDisabled" IconStart="@(new Icons.Regular.Size20.Add())">Add step</FluentButton>
+                </section>
+                <section class="notebook-panel">
+                    <h2>Expected yield &amp; cost</h2><p class="muted">Optional. A yield lets this recipe contribute a cost when used inside another recipe.</p>
+                    <FluentGrid Spacing="3">
+                        <FluentGridItem Xs="6"><FluentNumberInput Disabled="@EditorDisabled" TValue="decimal?" Culture="_quantityCulture" Step="0" Label="Yield amount" @bind-Value="_draft.Yield" /></FluentGridItem>
+                        <FluentGridItem Xs="6"><FluentSelect Disabled="@EditorDisabled" TOption="string" TValue="string" Label="Yield unit" Items="RecipeCosting.Units" @bind-Value="_draft.YieldUnit" /></FluentGridItem>
+                    </FluentGrid>
+                    <p><strong>@_currency @Cost.KnownTotal.ToString("0.00")</strong> known ingredient cost</p>
+                    @if (Cost.MissingCount > 0) { <p class="muted">Incomplete estimate: @Cost.MissingCount ingredient(s) need compatible purchase quantities and prices.</p> }
+                </section>
+            </FluentStack>
+        </FluentGridItem>
+    </FluentGrid>
+    <div class="save-bar" data-renderer="@RendererInfo.Name">
+        <FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Wrap="true">
+            <span role="status">@SaveStatus</span>
+            <FluentButton Appearance="ButtonAppearance.Primary" OnClick="SaveAsync" Disabled="@EditorDisabled" IconStart="@(new Icons.Regular.Size20.Save())">@(_version.IsLocked ? "Save correction" : "Save draft")</FluentButton>
+        </FluentStack>
+    </div>
+}
+else if (!Busy && Error is null) { <h1>Version not found</h1> }
+</div>
+<FluentProviders />
+
+
+

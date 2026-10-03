@@ -1,0 +1,8 @@
+.comparison-photo { width: 100%; max-height: 24rem; object-fit: contain; border-radius: var(--borderRadiusLarge); margin-bottom: var(--spacingVerticalM); }
+form p { margin-block: var(--spacingVerticalL) 0; }
+table { min-width: 0; table-layout: fixed; }
+th, td { overflow-wrap: anywhere; }
+
+@media (max-width: 600px) {
+    th, td { padding: var(--spacingVerticalS) var(--spacingHorizontalS); }
+}

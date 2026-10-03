@@ -1,11 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using Bunit;
+using IngaCookBook.Features.Account.Components;
+using IngaCookBook.Features.Account.Models;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using IngaCookBook.Features.Account.Components;
-using IngaCookBook.Features.Account.Models;
 using Shouldly;
 using Xunit;
 

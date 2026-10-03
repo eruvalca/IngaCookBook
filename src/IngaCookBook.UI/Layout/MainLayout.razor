@@ -4,26 +4,27 @@
 
 <div class="page">
     <FluentLayout Id="app-layout" Class="app-layout" GlobalScrollbar="true" Height="auto">
-        <FluentLayoutItem Area="LayoutArea.Header">
+        <FluentLayoutItem Area="LayoutArea.Header" Class="site-header-area">
             <header class="site-header">
-                <FluentStack VerticalAlignment="VerticalAlignment.Center" HorizontalGap="var(--spacingHorizontalM)" Height="100%">
+                <FluentStack VerticalAlignment="VerticalAlignment.Center" HorizontalGap="var(--spacingHorizontalM)" Height="100%" Width="100%">
                     <div class="menu-toggle">
                         <FluentLayoutHamburger Id="site-menu" PanelHeader="IngaCookBook" />
                     </div>
                     <a class="site-name" href="/">IngaCookBook</a>
+                    <span class="site-tagline">A little better, every batch.</span>
                 </FluentStack>
             </header>
         </FluentLayoutItem>
         <FluentLayoutItem Area="LayoutArea.Navigation" Class="site-navigation">
             <NavMenu />
         </FluentLayoutItem>
-        <FluentLayoutItem Area="LayoutArea.Content">
+        <FluentLayoutItem Area="LayoutArea.Content" Class="site-content-area">
             <main id="main-content" class="content-container" tabindex="-1">
                 @Body
             </main>
         </FluentLayoutItem>
         <FluentLayoutItem Area="LayoutArea.Footer">
-            <footer class="site-footer">IngaCookBook</footer>
+            <footer class="site-footer">Made with curiosity. Kept with care.</footer>
         </FluentLayoutItem>
     </FluentLayout>
 </div>

@@ -1,0 +1,63 @@
+@page "/recipes"
+@attribute [Authorize]
+@inherits NotebookPage
+
+<PageTitle>Your recipes · IngaCookBook</PageTitle>
+<p class="eyebrow">YOUR DEVELOPMENT NOTEBOOK</p>
+<FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Wrap="true">
+    <div><h1>Your recipes</h1><p class="lede">Small changes. Delicious discoveries.</p></div>
+    <a class="action-link primary" href="/recipes/new">+ New recipe</a>
+</FluentStack>
+<SaveNotice Error="@Error" />
+@if (_loaded && _workspace is null)
+{
+    <section class="empty-state"><h2>A place for your ideas</h2><p>Create your private workspace to start your recipe notebook.</p><a class="action-link primary" href="/workspace">Create workspace</a></section>
+}
+else if (_loaded)
+{
+    <FluentGrid Spacing="4" Class="notebook-stats">
+        <FluentGridItem Xs="4"><div class="stat"><strong>@_recipes.Count</strong><span>recipes</span></div></FluentGridItem>
+        <FluentGridItem Xs="4"><div class="stat"><strong>@_recipes.Sum(r => r.Versions.Count)</strong><span>versions</span></div></FluentGridItem>
+        <FluentGridItem Xs="4"><div class="stat"><strong>@_recipes.Count(r => r.StandardVersionId is not null)</strong><span>standards</span></div></FluentGridItem>
+    </FluentGrid>
+    <form method="get" action="/recipes" class="library-search" role="search">
+        <FluentStack VerticalAlignment="VerticalAlignment.Bottom" HorizontalGap="var(--spacingHorizontalM)" Wrap="true">
+            <div class="form-field"><label for="recipe-search">Find a recipe</label><input id="recipe-search" name="q" type="search" value="@Query" placeholder="Vanilla, caramel, sourdough…" /></div>
+            <button type="submit">Search</button>
+            <a href="/recipes">Clear</a>
+        </FluentStack>
+    </form>
+    @if (!Filtered.Any())
+    {
+        <section class="empty-state"><span class="eyebrow">ROOM FOR SOMETHING GOOD</span><h2>@(_recipes.Count == 0 ? "Your first recipe starts here" : "No matching recipes")</h2><p>Capture your ingredients, make a batch, and let each tasting guide your next experiment.</p><a href="/recipes/new" class="action-link primary">Start a recipe</a></section>
+    }
+    <FluentGrid Spacing="5">
+        @foreach (var recipe in Filtered)
+        {
+            <FluentGridItem Xs="12" Sm="6" Lg="4" @key="recipe.Id">
+                <article class="recipe-card">
+                    <div class="recipe-card-cover">
+                        @if (Cover(recipe) is { } cover)
+                        {
+                            <img src="@cover" alt="@recipe.Name" loading="lazy" />
+                        }
+                        else
+                        {
+                            <FluentIcon Value="@(new Icons.Regular.Size48.Food())" aria-hidden="true" />
+                        }
+                    </div>
+                    <div class="recipe-card-body">
+                        <span class="badge">@(recipe.StandardVersionId is null ? "In development" : "Standard selected")</span>
+                        <h2><a href="@($"/recipes/{recipe.Id}")">@recipe.Name</a></h2>
+                        <p>@recipe.Description</p>
+                        <p class="muted">@recipe.Versions.Count versions · @recipe.Versions.Sum(v => v.Batches.Count) batches</p>
+                    </div>
+                </article>
+            </FluentGridItem>
+        }
+    </FluentGrid>
+}
+else if (Error is null)
+{
+    <p role="status">Opening your notebook…</p>
+}

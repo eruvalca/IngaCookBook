@@ -7,8 +7,8 @@
        native links keyboard reachable, including before Blazor starts. *@
     <FluentNav UseIcons="true" aria-label="Main navigation">
         <FluentNavItem Href="/" Match="NavLinkMatch.All" IconRest="@(new Icons.Regular.Size20.Home())" IconActive="@(new Icons.Filled.Size20.Home())" tabindex="0">Home</FluentNavItem>
-        <FluentNavItem Href="counter" IconRest="@(new Icons.Regular.Size20.NumberSymbol())" IconActive="@(new Icons.Filled.Size20.NumberSymbol())" tabindex="0">Counter</FluentNavItem>
-        <FluentNavItem Href="auth" IconRest="@(new Icons.Regular.Size20.ShieldLock())" IconActive="@(new Icons.Filled.Size20.ShieldLock())" tabindex="0">Auth Required</FluentNavItem>
+        <FluentNavItem Href="recipes" IconRest="@(new Icons.Regular.Size20.BookOpen())" IconActive="@(new Icons.Filled.Size20.BookOpen())" tabindex="0">Recipes</FluentNavItem>
+        <FluentNavItem Href="workspace" IconRest="@(new Icons.Regular.Size20.Building())" IconActive="@(new Icons.Filled.Size20.Building())" tabindex="0">Workspace</FluentNavItem>
         <FluentNavSectionHeader Title="Account" />
         <AuthorizeView>
             <Authorized>
@@ -30,3 +30,4 @@
         </Authorized>
     </AuthorizeView>
 </div>
+<Appearance />

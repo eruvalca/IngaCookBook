@@ -1,0 +1,2 @@
+li { padding: var(--spacingVerticalM); }
+ul { list-style: none; border-left: 2px solid var(--colorBrandStroke2); margin-block: var(--spacingVerticalM); padding-left: var(--spacingHorizontalL); }

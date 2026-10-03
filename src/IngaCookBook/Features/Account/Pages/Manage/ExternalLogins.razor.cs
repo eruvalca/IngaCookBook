@@ -1,8 +1,8 @@
+using IngaCookBook.Data;
+using IngaCookBook.Features.Account.Extensions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
-using IngaCookBook.Data;
-using IngaCookBook.Features.Account.Extensions;
 
 namespace IngaCookBook.Features.Account.Pages.Manage;
 

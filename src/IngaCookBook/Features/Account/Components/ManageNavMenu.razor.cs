@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Identity;
 using IngaCookBook.Data;
+using Microsoft.AspNetCore.Identity;
 
 namespace IngaCookBook.Features.Account.Components;
 

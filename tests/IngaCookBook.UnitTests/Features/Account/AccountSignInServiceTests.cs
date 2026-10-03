@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using IngaCookBook.Features.Account.Models;
+using IngaCookBook.Features.Account.Services;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
-using IngaCookBook.Features.Account.Models;
-using IngaCookBook.Features.Account.Services;
 using Shouldly;
 using Xunit;
 

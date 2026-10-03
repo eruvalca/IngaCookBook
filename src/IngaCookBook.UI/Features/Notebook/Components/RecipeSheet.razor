@@ -1,0 +1,35 @@
+@if (Content.Yield is not null)
+{
+    <p class="muted">Makes @Content.Yield @Content.YieldUnit</p>
+}
+<FluentGrid Spacing="6">
+    <FluentGridItem Xs="12" Sm="5">
+        <h2>Ingredients</h2>
+        <ul class="ingredient-list">
+            @foreach (var ingredient in Content.Ingredients)
+            {
+                <li @key="ingredient.Id"><strong>@ingredient.Quantity @ingredient.Unit</strong> @ingredient.Name
+                    @if (ingredient.LinkedContent is not null)
+                    {
+                        <details open="@ExpandNested"><summary>Included recipe: @ingredient.LinkedContent.Label</summary><RecipeSheet Content="ingredient.LinkedContent" ExpandNested="ExpandNested" /></details>
+                    }
+                </li>
+            }
+        </ul>
+    </FluentGridItem>
+    <FluentGridItem Xs="12" Sm="7">
+        <h2>Preparation</h2>
+        <ol class="preparation-list">
+            @foreach (var step in Content.Steps)
+            {
+                <li @key="step.Id"><p class="preserve-lines">@step.Instruction</p>
+                    @if (!string.IsNullOrWhiteSpace(step.Notes)) { <p class="muted preserve-lines">@step.Notes</p> }
+                </li>
+            }
+        </ol>
+    </FluentGridItem>
+</FluentGrid>
+@if (!string.IsNullOrWhiteSpace(Content.Notes))
+{
+    <h2>Recipe notes</h2><p class="preserve-lines">@Content.Notes</p>
+}

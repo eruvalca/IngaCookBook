@@ -1,8 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
+using IngaCookBook.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using IngaCookBook.Data;
 using Shouldly;
 using Testcontainers.PostgreSql;
 using Xunit;

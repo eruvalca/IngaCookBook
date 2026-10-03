@@ -1,12 +1,14 @@
 using System.ComponentModel.DataAnnotations;
+using IngaCookBook.Data;
+using IngaCookBook.Features.Account.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
-using IngaCookBook.Data;
 
 namespace IngaCookBook.Features.Account.Pages.Manage;
 
 public sealed partial class DeletePersonalData
 {
+    [Inject] private IAccountDeletionService Deletion { get; set; } = default!;
     private string? _message;
     private ApplicationUser? _user;
     private bool _requirePassword;
@@ -44,7 +46,7 @@ public sealed partial class DeletePersonalData
             return;
         }
 
-        var result = await UserManager.DeleteAsync(_user);
+        var result = await Deletion.DeleteAsync(_user, HttpContext.RequestAborted);
         if (!result.Succeeded)
         {
             throw new InvalidOperationException("Unexpected error occurred deleting user.");

@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using IngaCookBook.Features.Account.Endpoints;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using IngaCookBook.Features.Account.Endpoints;
 using Shouldly;
 using Xunit;
 

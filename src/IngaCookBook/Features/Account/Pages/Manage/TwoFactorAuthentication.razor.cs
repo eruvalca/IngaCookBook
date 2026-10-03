@@ -1,7 +1,7 @@
+using IngaCookBook.Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
-using IngaCookBook.Data;
 
 namespace IngaCookBook.Features.Account.Pages.Manage;
 

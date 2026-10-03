@@ -1,10 +1,10 @@
+using IngaCookBook.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using IngaCookBook.Data;
 
 namespace IngaCookBook.UnitTests.Features.Account;
 

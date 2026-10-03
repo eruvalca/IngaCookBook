@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
+using IngaCookBook.Features.Account.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
-using IngaCookBook.Features.Account.Services;
 using Shouldly;
 using Xunit;
 

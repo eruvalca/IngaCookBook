@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
-using NSubstitute;
 using IngaCookBook.Data;
 using IngaCookBook.Features.Account.Models;
 using IngaCookBook.Features.Account.Services;
+using Microsoft.AspNetCore.Identity;
+using NSubstitute;
 using Shouldly;
 using Xunit;
 

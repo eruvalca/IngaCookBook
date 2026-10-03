@@ -1,6 +1,6 @@
+using IngaCookBook.Features.Account.Models;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Components;
-using IngaCookBook.Features.Account.Models;
 
 namespace IngaCookBook.Features.Account.Components;
 

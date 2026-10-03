@@ -1,0 +1,64 @@
+@page "/recipes/{RecipeId:guid}/versions/{VersionId:guid}/batches"
+@attribute [Authorize]
+@rendermode InteractiveAuto
+@inherits NotebookPage
+
+<PageTitle>Batches &amp; tastings · IngaCookBook</PageTitle>
+<a class="back-link" href="@($"/recipes/{RecipeId}/versions/{VersionId}")">← Version details</a>
+<SaveNotice Error="@Error" Status="@Status" />
+@if (_recipe is not null && _version is not null)
+{
+    <p class="eyebrow">@_recipe.Name · VERSION @_version.Number</p><h1>Make it. Taste it. Learn.</h1>
+    <p class="lede">Keep each batch and each tasting together, so your observations have context.</p>
+    <FluentGrid Spacing="6" data-renderer="@RendererInfo.Name">
+        <FluentGridItem Xs="12" Md="5">
+            <section class="notebook-panel editor-form">
+                <h2>Make a batch</h2><p>This uses the ingredients and preparation from @_version.Content.Label. Recording a batch preserves this version.</p>
+                <div class="form-field"><label for="made-date">Date made</label><input id="made-date" type="date" disabled="@JournalDisabled" @bind="_madeDate" /></div>
+                <FluentTextArea Disabled="@JournalDisabled" Label="What happened during preparation?" @bind-Value="_batchNotes" Placeholder="Any observations or departures from the instructions?" />
+                <FluentButton Disabled="@(JournalDisabled || _madeDate is null)" Appearance="ButtonAppearance.Primary" OnClick="MakeAsync">Record batch</FluentButton>
+            </section>
+        </FluentGridItem>
+        <FluentGridItem Xs="12" Md="7">
+            <section class="notebook-panel editor-form">
+                <h2>Add a tasting</h2>
+                @if (_version.Batches.Count == 0)
+                {
+                    <p class="muted">Record your first batch, then tell your notebook how it turned out.</p>
+                }
+                else
+                {
+                    <FluentSelect Disabled="@JournalDisabled" TOption="BatchOption" TValue="string" Label="Which batch are you tasting?" Items="BatchOptions" OptionText="@(b => b.Label)" OptionValue="@(b => b.Id)" @bind-Value="_batchId" />
+                    <div class="form-field"><label for="tasting-date">Date tasted</label><input id="tasting-date" type="date" disabled="@JournalDisabled" @bind="_tastedDate" /></div>
+                    <p class="muted">1 = needs work · 10 = exactly right. Leave anything you didn't assess blank.</p>
+                    @foreach (var score in _scores)
+                    {
+                        <div class="metric-editor" @key="score.Id">
+                            <FluentNumberInput Disabled="@JournalDisabled" TValue="int?" Label="@score.Name" @bind-Value="score.Score" Min="1" Max="10" Step="1" />
+                            <FluentTextArea Disabled="@JournalDisabled" Label="@($"Notes for {score.Name}")" @bind-Value="score.Notes" Placeholder="What made you choose this score?" />
+                        </div>
+                    }
+                    <FluentTextArea Disabled="@JournalDisabled" Label="Overall observations" @bind-Value="_notes" />
+                    <FluentTextArea Disabled="@JournalDisabled" Label="One thing to try next" @bind-Value="_nextIdea" Placeholder="What single change might improve your chosen metric?" />
+                    <FluentButton Disabled="@(JournalDisabled || _tastedDate is null)" Appearance="ButtonAppearance.Primary" OnClick="EvaluateAsync">Save evaluation</FluentButton>
+                }
+            </section>
+        </FluentGridItem>
+    </FluentGrid>
+    <section class="notebook-panel"><h2>Recorded tastings</h2>
+        @foreach (var batch in _version.Batches)
+        {
+            <h3>Batch @(_version.Batches.ToList().IndexOf(batch) + 1) · @batch.MadeAt.ToString("MMM d, yyyy")</h3>
+            <p class="preserve-lines">@batch.Notes</p>
+            @foreach (var evaluation in batch.Evaluations)
+            {
+                <article class="evaluation-entry"><h4>@evaluation.TastedAt.ToString("MMM d, yyyy")</h4><p>@evaluation.Notes</p>
+                    <dl class="score-list">@foreach (var metric in _recipe.Metrics) { var score = evaluation.Scores.FirstOrDefault(s => s.MetricId == metric.Id); <dt>@metric.Name: <strong>@(score?.Score?.ToString() ?? "Not scored")</strong></dt><dd>@score?.Notes</dd> }</dl>
+                    <p><strong>Next idea:</strong> @evaluation.NextIdea</p>
+                </article>
+            }
+        }
+    </section>
+}
+else if (!Busy && Error is null) { <h1>Version not found</h1> }
+<FluentProviders />

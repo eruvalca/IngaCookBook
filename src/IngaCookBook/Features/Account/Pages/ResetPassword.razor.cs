@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Identity;
 using IngaCookBook.Data;
 using IngaCookBook.Features.Account.Extensions;
 using IngaCookBook.Features.Account.Models;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Identity;
 
 namespace IngaCookBook.Features.Account.Pages;
 

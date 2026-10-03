@@ -1,0 +1,81 @@
+@page "/recipes/{RecipeId:guid}"
+@attribute [Authorize]
+@inherits NotebookPage
+
+<PageTitle>@(_recipe?.Name ?? "Recipe") · IngaCookBook</PageTitle>
+<a class="back-link" href="/recipes">← Recipe library</a>
+<SaveNotice Error="@Error" />
+@if (_recipe is { } recipe)
+{
+    <p class="eyebrow">RECIPE NOTEBOOK</p>
+    <FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" Wrap="true" VerticalAlignment="VerticalAlignment.Center">
+        <div><h1>@recipe.Name</h1><p class="lede">@recipe.Description</p></div>
+        <a class="action-link" href="@($"/recipes/{recipe.Id}/settings")">Recipe &amp; evaluation settings</a>
+    </FluentStack>
+    @if (recipe.OriginRecipeId is not null)
+    {
+        <p class="muted">Started from <a href="@($"/recipes/{recipe.OriginRecipeId}/versions/{recipe.OriginVersionId}")">another recipe's variation</a>.</p>
+    }
+    @if (recipe.Versions.FirstOrDefault(v => v.Id == recipe.StandardVersionId) is { } standard)
+    {
+        <section class="standard-banner"><span class="eyebrow">YOUR CURRENT STANDARD</span><h2>V@(standard.Number) · @standard.Content.Label</h2><p>The version you want to make again.</p><a class="action-link primary" href="@VersionUrl(standard)">Open standard</a></section>
+    }
+    <FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" Wrap="true" VerticalAlignment="VerticalAlignment.Center">
+        <div><h2>The story so far</h2><p class="muted">@recipe.Versions.Count versions · @recipe.Versions.Sum(v => v.Batches.Count) batches. Every experiment teaches you something.</p></div>
+        <FluentStack Width="auto" Wrap="true" HorizontalGap="var(--spacingHorizontalM)">
+            <a href="@($"/recipes/{recipe.Id}/compare")">Compare versions</a>
+            <a href="@($"/recipes/{recipe.Id}?view={(Branches ? "timeline" : "branches")}")">@(Branches ? "Timeline view" : "Branching view")</a>
+        </FluentStack>
+    </FluentStack>
+    @if (Branches)
+    {
+        <ul class="recipe-tree">
+            @foreach (var root in recipe.Versions.Where(v => v.ParentId is null))
+            {
+                <BranchNode Recipe="recipe" Version="root" @key="root.Id" />
+            }
+        </ul>
+    }
+    else
+    {
+        <ol class="version-timeline">
+            @foreach (var version in recipe.Versions.OrderByDescending(v => v.Number))
+            {
+                var parent = recipe.Versions.FirstOrDefault(v => v.Id == version.ParentId);
+                var changes = parent is null ? [] : RecipeComparison.Compare(parent.Content, version.Content);
+                <li @key="version.Id">
+                    <article class="notebook-panel">
+                        <span class="badge">@(version.IsLocked ? "Preserved" : "Draft")</span>
+                        @if (recipe.StandardVersionId == version.Id) { <span class="badge standard">Current standard</span> }
+                        <h3><a href="@VersionUrl(version)">V@(version.Number) · @version.Content.Label</a></h3>
+                        <p class="muted">@version.CreatedAt.ToString("MMM d, yyyy") · @(parent is null ? "The starting point" : $"From V{parent.Number}")</p>
+                        @if (!string.IsNullOrWhiteSpace(version.Content.Hypothesis)) { <p>@version.Content.Hypothesis</p> }
+                        @if (changes.Count > 0)
+                        {
+                            <ul class="change-summary">@foreach (var change in changes.Take(4)) { <li><strong>@change.Label</strong>: @change.Before → @change.After</li> }</ul>
+                            @if (changes.Count > 4) { <p>@(changes.Count - 4) more changes</p> }
+                        }
+                        @if (RecipeComparison.LatestEvaluation(version) is { } evaluation)
+                        {
+                            <p class="muted">Latest tasting: @evaluation.TastedAt.ToString("MMM d, yyyy")</p>
+                            <p>@evaluation.Notes</p>
+                            <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)">
+                                @foreach (var metric in recipe.Metrics)
+                                {
+                                    var score = evaluation.Scores.FirstOrDefault(s => s.MetricId == metric.Id);
+                                    <span class="score-chip">@metric.Name <strong>@(score?.Score?.ToString() ?? "—")</strong></span>
+                                }
+                            </FluentStack>
+                        }
+                        else { <p class="muted">No tastings recorded yet.</p> }
+                    </article>
+                </li>
+            }
+        </ol>
+    }
+}
+else if (!Busy && Error is null)
+{
+    <h1>Recipe not found</h1><p>This recipe isn't in your workspace.</p>
+}
+

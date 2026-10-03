@@ -1,0 +1,8 @@
+@if (Error is not null)
+{
+    <div class="notice" data-kind="error" role="alert">@Error</div>
+}
+else if (Status is not null)
+{
+    <p class="notice" data-kind="success" role="status">@Status</p>
+}

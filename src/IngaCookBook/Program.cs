@@ -1,17 +1,30 @@
+using IngaCookBook.Components;
+using IngaCookBook.Data;
+using IngaCookBook.Features.Account.Endpoints;
+using IngaCookBook.Features.Account.Services;
+using IngaCookBook.Features.Notebook.Endpoints;
+using IngaCookBook.Features.Notebook.Services;
+using IngaCookBook.ServiceDefaults;
+using IngaCookBook.SharedKernel.Notebook;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.FluentUI.AspNetCore.Components;
-using IngaCookBook.Components;
-using IngaCookBook.Data;
-using IngaCookBook.Features.Account.Endpoints;
-using IngaCookBook.Features.Account.Services;
-using IngaCookBook.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.AddAzureBlobServiceClient("recipephotos");
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddOpenApi();
+builder.Services.AddScoped<NotebookService>();
+builder.Services.AddScoped<INotebookService>(services => services.GetRequiredService<NotebookService>());
+builder.Services.AddScoped<IRecipePhotoStore, AzureRecipePhotoStore>();
+builder.Services.AddScoped<PhotoCleanupProcessor>();
+builder.Services.AddHostedService<PhotoCleanupWorker>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IAccountDeletionService, AccountDeletionService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -71,6 +84,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
     app.UseMigrationsEndPoint();
+    app.MapOpenApi();
 }
 else
 {
@@ -91,6 +105,7 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+app.MapNotebookEndpoints();
 app.MapDefaultEndpoints();
 
 await app.RunAsync();
