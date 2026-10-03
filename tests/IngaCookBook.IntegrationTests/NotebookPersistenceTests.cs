@@ -10,7 +10,7 @@ using Xunit;
 namespace IngaCookBook.IntegrationTests;
 
 [SuppressMessage("Maintainability", "CA1515:Consider making public types internal", Justification = "xUnit requires public test classes for discovery.")]
-public sealed class NotebookPersistenceTests
+public sealed partial class NotebookPersistenceTests
 {
     [Fact]
     public async Task RecipeLifecyclePreservesBatchesCorrectionsStandardsAndIndependentPromotion()

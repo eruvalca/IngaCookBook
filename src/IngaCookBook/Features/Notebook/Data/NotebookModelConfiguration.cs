@@ -88,6 +88,13 @@ internal static class NotebookModelConfiguration
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.HasMany(e => e.Evaluations).WithOne().HasForeignKey(e => e.BatchId);
+            entity.HasMany(e => e.Corrections).WithOne().HasForeignKey(e => e.BatchId);
+        });
+        builder.Entity<BatchCorrectionEntity>(entity =>
+        {
+            entity.ToTable("BatchCorrections");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
         });
         builder.Entity<EvaluationEntity>(entity =>
         {
@@ -95,6 +102,14 @@ internal static class NotebookModelConfiguration
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).ValueGeneratedNever();
             entity.HasMany(e => e.Scores).WithOne().HasForeignKey(e => e.EvaluationId);
+            entity.HasMany(e => e.Corrections).WithOne().HasForeignKey(e => e.EvaluationId);
+        });
+        builder.Entity<EvaluationCorrectionEntity>(entity =>
+        {
+            entity.ToTable("EvaluationCorrections");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedNever();
+            entity.Property(e => e.PreviousContent).HasColumnType("jsonb");
         });
         builder.Entity<ScoreEntity>(entity =>
         {

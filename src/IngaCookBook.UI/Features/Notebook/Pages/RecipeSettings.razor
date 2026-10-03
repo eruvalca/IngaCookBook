@@ -1,34 +1,37 @@
 @page "/recipes/{RecipeId:guid}/settings"
 @attribute [Authorize]
 @rendermode InteractiveAuto
-@inherits NotebookPage
+@inherits GuardedNotebookPage
 
 <PageTitle>Recipe settings · IngaCookBook</PageTitle>
+<NavigationLock OnBeforeInternalNavigation="BeforeNavigateAsync" />
+<div @ref="Editor" data-notebook-editor data-discard-message="Leave without saving your recipe changes?" data-renderer="@RendererInfo.Name">
 <a class="back-link" href="@($"/recipes/{RecipeId}")">← Recipe history</a>
 <h1>Recipe &amp; evaluation settings</h1>
 <SaveNotice Error="@Error" Status="@Status" />
 @if (_recipe is not null)
 {
     <section class="notebook-panel editor-form">
-        <FluentTextInput Disabled="@Disabled" Label="Recipe name" @bind-Value="_name" MaxLength="200" />
-        <FluentTextArea Disabled="@Disabled" Label="About this recipe" @bind-Value="_description" MaxLength="4000" />
+        <FluentTextInput Disabled="@FormDisabled" Label="Recipe name" @bind-Value="_name" MaxLength="200" />
+        <FluentTextArea Disabled="@FormDisabled" Label="About this recipe" @bind-Value="_description" MaxLength="4000" />
         <h2>What makes this recipe good?</h2><p>These criteria are shared across every version and variation. Each is scored from 1–10, where 10 is best.</p>
         @foreach (var metric in _metrics)
         {
             <FluentStack HorizontalGap="var(--spacingHorizontalM)" VerticalAlignment="VerticalAlignment.Bottom" @key="metric.Id">
-                <FluentTextInput Disabled="@Disabled" Label="Metric name" @bind-Value="metric.Name" MaxLength="100" />
-                <FluentButton Disabled="@Disabled" OnClick="@(() => _metrics.Remove(metric))">Remove</FluentButton>
+                <FluentTextInput Disabled="@FormDisabled" Label="Metric name" @bind-Value="metric.Name" MaxLength="100" />
+                <FluentButton Disabled="@FormDisabled" OnClick="@(() => _metrics.Remove(metric))">Remove</FluentButton>
             </FluentStack>
         }
-        <FluentButton Disabled="@Disabled" OnClick="AddMetric">Add metric</FluentButton>
+        <FluentButton Disabled="@FormDisabled" OnClick="AddMetric">Add metric</FluentButton>
         <p class="muted">New metrics appear blank in earlier evaluations. Removing a metric deletes its scores and notes from every evaluation of this recipe.</p>
         @if (RemovedNames.Length > 0)
         {
             <div class="notice" data-kind="warning"><p>Saving will delete scores and notes for: <strong>@string.Join(", ", RemovedNames)</strong>.</p>
-                <FluentCheckbox Disabled="@Disabled" Label="I understand these historical scores and notes will be deleted" @bind-Value="_confirmRemoval" />
+                <FluentCheckbox Disabled="@FormDisabled" Label="I understand these historical scores and notes will be deleted" @bind-Value="_confirmRemoval" />
             </div>
         }
-        <FluentButton Appearance="ButtonAppearance.Primary" Disabled="@(Disabled || (RemovedNames.Length > 0 && !_confirmRemoval))" OnClick="SaveAsync">Save settings</FluentButton>
+        <FluentButton Appearance="ButtonAppearance.Primary" Disabled="@(FormDisabled || (RemovedNames.Length > 0 && !_confirmRemoval))" OnClick="SaveAsync">Save settings</FluentButton>
     </section>
 }
+</div>
 <FluentProviders />

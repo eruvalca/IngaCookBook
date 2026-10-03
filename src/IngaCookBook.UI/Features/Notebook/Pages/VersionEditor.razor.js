@@ -52,7 +52,7 @@ export function updateGuard(editor, dirty, savedRevision) {
 }
 
 export function confirmDiscard() {
-    return !guard?.isDirty || window.confirm('Leave without saving your recipe changes?');
+    return !guard?.isDirty || window.confirm(guard.editor.dataset.discardMessage ?? 'Leave without saving your recipe changes?');
 }
 
 export function disposeGuard(editor) {

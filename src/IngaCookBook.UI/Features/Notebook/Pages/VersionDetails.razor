@@ -43,13 +43,15 @@
         @foreach (var batch in _version.Batches.OrderByDescending(b => b.MadeAt))
         {
             <details class="batch-history"><summary>Batch made @batch.MadeAt.ToString("MMM d, yyyy") · @batch.Evaluations.Count tastings</summary>
-                <p class="preserve-lines">@batch.Notes</p>
+            <p class="preserve-lines">@batch.Notes</p>
+            <BatchAudit Corrections="batch.Corrections" />
                 @foreach (var evaluation in batch.Evaluations.OrderByDescending(e => e.TastedAt))
                 {
                     <article class="evaluation-entry"><h3>Tasted @evaluation.TastedAt.ToString("MMM d, yyyy")</h3>
                         <dl class="score-list">@foreach (var metric in _recipe.Metrics) { var score = evaluation.Scores.FirstOrDefault(s => s.MetricId == metric.Id); <dt>@metric.Name: <strong>@(score?.Score?.ToString() ?? "Not scored")</strong></dt><dd>@score?.Notes</dd> }</dl>
                         <p class="preserve-lines">@evaluation.Notes</p>
                         @if (!string.IsNullOrWhiteSpace(evaluation.NextIdea)) { <p><strong>Next idea:</strong> @evaluation.NextIdea</p> }
+                        <EvaluationAudit Corrections="evaluation.Corrections" Metrics="_recipe.Metrics" />
                     </article>
                 }
             </details>
@@ -61,13 +63,14 @@
         <section class="notebook-panel"><h2>Corrections to this record</h2>
             @foreach (var correction in _version.Corrections)
             {
-                <details><summary>@correction.CorrectedAt.ToString("MMM d, yyyy") · @correction.Reason</summary><h3>Content before this correction</h3><RecipeSheet Content="correction.PreviousContent" /></details>
+                <details><summary><LocalDate Value="correction.CorrectedAt" /> · @correction.Reason</summary><h3>Content before this correction</h3><RecipeSheet Content="correction.PreviousContent" /></details>
             }
         </section>
     }
     @if (_recipe.Standards.Any(s => s.VersionId == VersionId))
     {
-        <p class="muted">Selected as standard: @string.Join(", ", _recipe.Standards.Where(s => s.VersionId == VersionId).Select(s => s.SelectedAt.ToString("MMM d, yyyy")))</p>
+        var selections = _recipe.Standards.Where(s => s.VersionId == VersionId).ToArray();
+        <p class="muted">Selected as standard: @for (var i = 0; i < selections.Length; i++) { @(i > 0 ? ", " : "")<LocalDate Value="selections[i].SelectedAt" /> }</p>
     }
 }
 else if (!Busy && Error is null) { <h1>Version not found</h1> }

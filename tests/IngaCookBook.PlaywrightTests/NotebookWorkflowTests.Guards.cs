@@ -51,6 +51,8 @@ public sealed partial class NotebookWorkflowTests
             await page.Locator($"[data-renderer={renderer}]").WaitForAsync(new() { Timeout = 60000 });
             await VerifyEditorGuardAsync(page, details);
             await VerifyLocalDatesAsync(page, details, renderer);
+            await VerifyRecipeCreationAndSettingsGuardsAsync(page, details, renderer);
+            await VerifyBatchCorrectionRecoveryAsync(page, details, renderer);
         }
         finally
         {
@@ -107,7 +109,7 @@ public sealed partial class NotebookWorkflowTests
         await page.WaitForURLAsync(details);
     }
 
-    private static async Task AttemptNavigationAsync(IPage page, Func<Task> navigate, bool accept, string dialogType = "confirm")
+    private static async Task AttemptNavigationAsync(IPage page, Func<Task> navigate, bool accept, string dialogType = "confirm", string message = "Leave without saving your recipe changes?")
     {
         var received = new TaskCompletionSource<IDialog>(TaskCreationOptions.RunContinuationsAsynchronously);
         void OnDialog(object? sender, IDialog dialog) => received.TrySetResult(dialog);
@@ -119,7 +121,7 @@ public sealed partial class NotebookWorkflowTests
             dialog.Type.ShouldBe(dialogType);
             if (string.Equals(dialogType, "confirm", StringComparison.Ordinal))
             {
-                dialog.Message.ShouldBe("Leave without saving your recipe changes?");
+                dialog.Message.ShouldBe(message);
             }
             if (accept) { await dialog.AcceptAsync(); }
             else { await dialog.DismissAsync(); }
@@ -146,9 +148,17 @@ public sealed partial class NotebookWorkflowTests
         await Field(page, "Overall observations").FillAsync("Evening tasting");
         await InteractiveButton(page, "Save evaluation").ClickAsync();
         await page.Locator(".evaluation-entry").Filter(new() { HasText = "Evening tasting" }).WaitForAsync();
+        await VerifyJournalGuardAndCorrectionsAsync(page, details);
         await page.GotoAsync(details);
-        (await page.Locator(".batch-history summary").InnerTextAsync()).ShouldContain("Oct 2, 2001");
-        await page.Locator(".batch-history summary").ClickAsync();
-        (await page.Locator(".batch-history .evaluation-entry h3").InnerTextAsync()).ShouldContain("Oct 2, 2001");
+        (await page.Locator(".batch-history > summary").InnerTextAsync()).ShouldContain("Oct 2, 2001");
+        await page.Locator(".batch-history > summary").ClickAsync();
+        (await page.Locator(".batch-history .evaluation-entry h3").First.InnerTextAsync()).ShouldContain("Oct 2, 2001");
+        await page.GetByRole(AriaRole.Link, new() { Name = "← Recipe history", Exact = true }).ClickAsync();
+        var timestamp = page.Locator(".version-timeline time[data-local-date]").First;
+        await timestamp.WaitForAsync();
+        // Exercise a known UTC boundary through the same semantic timestamp used
+        // by SSR history, standards, and interactive correction history.
+        await timestamp.EvaluateAsync("element => element.setAttribute('datetime', '2001-10-03T00:30:00Z')");
+        await page.WaitForFunctionAsync("document.querySelector('.version-timeline time[data-local-date]').textContent === 'Oct 2, 2001'");
     }
 }

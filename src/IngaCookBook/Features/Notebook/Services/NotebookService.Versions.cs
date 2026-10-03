@@ -26,7 +26,7 @@ internal sealed partial class NotebookService
             return new ChangeRejected("Choose one of this recipe's current evaluation metrics.");
         }
         var parent = recipe.Versions.FirstOrDefault(v => v.Id == version.ParentId);
-        if (parent is not null && RecipeComparison.Compare(parent.Content, request.Content).Count > 1 &&
+        if (!version.IsLocked && parent is not null && RecipeComparison.Compare(parent.Content, request.Content).Count > 1 &&
             string.IsNullOrWhiteSpace(request.Content.RelatedChanges))
         {
             return new ChangeRejected("Several things changed. Explain how they belong to one experiment, or try separate variations.");

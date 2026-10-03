@@ -12,7 +12,7 @@ using Xunit;
 namespace IngaCookBook.ComponentTests.Features.Notebook;
 
 [SuppressMessage("Maintainability", "CA1515:Consider making public types internal", Justification = "xUnit requires public test classes for discovery.")]
-public sealed class NotebookFormSaveTests
+public sealed partial class NotebookFormSaveTests
 {
     [Theory]
     [InlineData(true)]

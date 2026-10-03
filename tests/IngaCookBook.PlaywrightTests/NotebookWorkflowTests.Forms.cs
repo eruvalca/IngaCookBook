@@ -37,6 +37,9 @@ public sealed partial class NotebookWorkflowTests
         await InteractiveButton(page, "Create recipe & first version").ClickAsync();
         await InteractiveButton(page, "Add ingredient").ClickAsync();
         await Field(page, "Ingredient name").FillAsync("Heavy cream");
+        await Field(page, "Amount").FillAsync("100.123456");
+        await Field(page, "Amount").PressAsync("Tab");
+        (await Field(page, "Amount").InputValueAsync()).ShouldBe("100.123456");
         await Field(page, "Amount").FillAsync("100.1256");
         await page.GetByText("Purchase cost or linked recipe", new() { Exact = true }).ClickAsync();
         await Field(page, "Purchased amount").FillAsync("1000");
@@ -44,7 +47,8 @@ public sealed partial class NotebookWorkflowTests
         await InteractiveButton(page, "Add step").ClickAsync();
         await Field(page, "Step 1").FillAsync("Mix and chill");
         await SaveDraftAsync(page);
-        (await Field(page, "Amount").InputValueAsync()).ShouldBe("100.125600");
+        (await Field(page, "Amount").InputValueAsync()).ShouldBe("100.1256");
+        (await Field(page, "Purchased amount").InputValueAsync()).ShouldBe("1000");
         (await page.Locator("main").InnerTextAsync()).ShouldContain("USD 0.80");
         (await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth")).ShouldBeTrue();
     }

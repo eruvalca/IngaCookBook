@@ -20,6 +20,18 @@
     <FluentGrid Spacing="6">
         <FluentGridItem Xs="12" Md="4" Justify="JustifyContent.FlexStart">
             <aside class="experiment-panel notebook-panel editor-form">
+                @if (_version.IsLocked)
+                {
+                    <h2>Changes in this correction</h2>
+                    <p>Your correction reason explains these changes to the preserved record.</p>
+                    <ul class="change-summary">@foreach (var change in Changes) { <li><strong>@change.Label</strong><br />@change.Before → @change.After</li> }</ul>
+                    <h3>Recorded experiment</h3>
+                    <FluentSelect Disabled="@EditorDisabled" TOption="MetricOption" TValue="string" Label="Metric to improve" Items="MetricOptions" OptionText="@(m => m.Name)" OptionValue="@(m => m.Id)" @bind-Value="_draft.TargetMetric" />
+                    <FluentTextArea Disabled="@EditorDisabled" Label="What are you testing?" @bind-Value="_draft.Hypothesis" />
+                    <FluentTextArea Disabled="@EditorDisabled" Label="Recorded explanation for related changes (optional)" @bind-Value="_draft.RelatedChanges" />
+                }
+                else
+                {
                 <span class="eyebrow">ONE QUESTION AT A TIME</span><h2>Keep your experiment focused</h2>
                 <p>Choose what you want to learn. Smaller changes make the results easier to understand.</p>
                 <FluentSelect Disabled="@EditorDisabled" TOption="MetricOption" TValue="string" Label="Metric to improve" Items="MetricOptions" OptionText="@(m => m.Name)" OptionValue="@(m => m.Id)" @bind-Value="_draft.TargetMetric" />
@@ -36,6 +48,7 @@
                     }
                 }
                 else { <p class="muted">This is your baseline. Future variations will show exactly what changed here.</p> }
+                }
             </aside>
         </FluentGridItem>
         <FluentGridItem Xs="12" Md="8">

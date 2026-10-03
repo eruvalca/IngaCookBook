@@ -50,6 +50,8 @@ internal static class NotebookEndpoints
     private static void MapVersions(RouteGroupBuilder group)
     {
         var versions = group.MapGroup("/recipes/{recipeId:guid}/versions/{versionId:guid}");
+        versions.MapPut("/batches/{batchId:guid}", async (Guid recipeId, Guid versionId, Guid batchId, BatchCorrectionRequest request, INotebookService service, CancellationToken ct) =>
+            Reply(await service.CorrectBatchAsync(recipeId, versionId, batchId, request, ct)));
         versions.MapGet("/", async Task<Results<Ok<RecipeVersion>, NotFound>> (Guid recipeId, Guid versionId, INotebookService service, CancellationToken ct) =>
             (await service.GetRecipeAsync(recipeId, ct))?.Versions.FirstOrDefault(v => v.Id == versionId) is { } version
                 ? TypedResults.Ok(version) : TypedResults.NotFound());
@@ -72,6 +74,8 @@ internal static class NotebookEndpoints
         versions.MapPost("/batches/{batchId:guid}/evaluations", async (Guid recipeId, Guid versionId, Guid batchId, EvaluationRequest request, INotebookService service, CancellationToken ct) =>
             Reply(await service.EvaluateAsync(recipeId, versionId, batchId, request, ct),
                 $"/api/notebook/recipes/{recipeId}/versions/{versionId}/batches/{batchId}/evaluations"));
+        versions.MapPut("/batches/{batchId:guid}/evaluations/{evaluationId:guid}", async (Guid recipeId, Guid versionId, Guid batchId, Guid evaluationId, EvaluationCorrectionRequest request, INotebookService service, CancellationToken ct) =>
+            Reply(await service.CorrectEvaluationAsync(recipeId, versionId, batchId, evaluationId, request, ct)));
     }
 
     private static void MapPhotos(RouteGroupBuilder group)

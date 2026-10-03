@@ -3,6 +3,7 @@ using System;
 using IngaCookBook.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IngaCookBook.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261003045706_AddEvaluationCorrections")]
+    partial class AddEvaluationCorrections
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,35 +90,6 @@ namespace IngaCookBook.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("IngaCookBook.Features.Notebook.Data.BatchCorrectionEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("BatchId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CorrectedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset>("PreviousMadeAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PreviousNotes")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BatchId");
-
-                    b.ToTable("BatchCorrections", (string)null);
-                });
-
             modelBuilder.Entity("IngaCookBook.Features.Notebook.Data.BatchEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -127,9 +101,6 @@ namespace IngaCookBook.Migrations
                     b.Property<string>("Notes")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<int>("Position")
-                        .HasColumnType("integer");
 
                     b.Property<Guid>("VersionId")
                         .HasColumnType("uuid");
@@ -712,15 +683,6 @@ namespace IngaCookBook.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("IngaCookBook.Features.Notebook.Data.BatchCorrectionEntity", b =>
-                {
-                    b.HasOne("IngaCookBook.Features.Notebook.Data.BatchEntity", null)
-                        .WithMany("Corrections")
-                        .HasForeignKey("BatchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("IngaCookBook.Features.Notebook.Data.BatchEntity", b =>
                 {
                     b.HasOne("IngaCookBook.Features.Notebook.Data.VersionEntity", null)
@@ -953,8 +915,6 @@ namespace IngaCookBook.Migrations
 
             modelBuilder.Entity("IngaCookBook.Features.Notebook.Data.BatchEntity", b =>
                 {
-                    b.Navigation("Corrections");
-
                     b.Navigation("Evaluations");
                 });
 

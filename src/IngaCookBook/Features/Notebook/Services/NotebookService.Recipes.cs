@@ -124,7 +124,17 @@ internal sealed partial class NotebookService
                 Content = v.Content with { TargetMetricId = ids.Contains(v.Content.TargetMetricId ?? Guid.Empty) ? v.Content.TargetMetricId : null },
                 Batches = v.Batches.Select(b => b with
                 {
-                    Evaluations = b.Evaluations.Select(e => e with { Scores = e.Scores.Where(s => ids.Contains(s.MetricId)).ToArray() }).ToArray(),
+                    Evaluations = b.Evaluations.Select(e => e with
+                    {
+                        Scores = e.Scores.Where(s => ids.Contains(s.MetricId)).ToArray(),
+                        Corrections = e.Corrections.Select(c => c with
+                        {
+                            PreviousContent = c.PreviousContent with
+                            {
+                                Scores = c.PreviousContent.Scores.Where(s => ids.Contains(s.MetricId)).ToArray(),
+                            },
+                        }).ToArray(),
+                    }).ToArray(),
                 }).ToArray(),
             }).ToArray(),
         }, recipeId, cancellationToken);

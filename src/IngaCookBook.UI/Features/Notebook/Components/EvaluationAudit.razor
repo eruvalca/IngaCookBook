@@ -1,0 +1,16 @@
+@foreach (var correction in Corrections)
+{
+    <details class="evaluation-correction">
+        <summary>Corrected <LocalDate Value="correction.CorrectedAt" /> · @correction.Reason</summary>
+        <h4>Tasting before this correction · @correction.PreviousContent.TastedAt.ToString("MMM d, yyyy")</h4>
+        <p class="preserve-lines">@correction.PreviousContent.Notes</p>
+        <dl class="score-list">
+            @foreach (var metric in Metrics)
+            {
+                var score = correction.PreviousContent.Scores.FirstOrDefault(s => s.MetricId == metric.Id);
+                <dt>@metric.Name: <strong>@(score?.Score?.ToString() ?? "Not scored")</strong></dt><dd>@score?.Notes</dd>
+            }
+        </dl>
+        <p><strong>Previous next idea:</strong> @correction.PreviousContent.NextIdea</p>
+    </details>
+}

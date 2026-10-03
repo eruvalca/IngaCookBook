@@ -1,5 +1,8 @@
+using System.Globalization;
+using System.Text.Json;
 using IngaCookBook.SharedKernel.Notebook;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.JSInterop;
 
 namespace IngaCookBook.UI.Features.Notebook.Pages;
@@ -14,9 +17,25 @@ public sealed partial class BatchJournal : IAsyncDisposable
     private DateTime? _madeDate;
     private DateTime? _tastedDate;
     private BrowserDateInterop? _dateInterop;
+    private EditorNavigationInterop? _navigationInterop;
+    private ElementReference _editor;
+    private ElementReference _tastingHeading;
+    private bool _focusTasting;
+    private bool _baselinesReady;
+    private int _savedRevision;
+    private string _savedBatch = "";
+    private string _savedEvaluation = "";
+    private Guid? _correctingId;
+    private string _correctionReason = "";
+    private bool GuardReady { get; set; }
 
     private bool DatesReady { get; set; }
-    private bool JournalDisabled => Disabled || !DatesReady;
+    private bool JournalDisabled => Disabled || !DatesReady || !GuardReady || !_baselinesReady;
+    private string BatchState => JsonSerializer.Serialize(new { _madeDate, _batchNotes, _batchCorrectionReason });
+    private string EvaluationState => JsonSerializer.Serialize(new { _batchId, _tastedDate, _notes, _nextIdea, _scores, _correctionReason });
+    private bool EvaluationDirty => _baselinesReady && !string.Equals(_savedEvaluation, EvaluationState, StringComparison.Ordinal);
+    private bool BatchDirty => _baselinesReady && !string.Equals(_savedBatch, BatchState, StringComparison.Ordinal);
+    private bool Dirty => BatchDirty || EvaluationDirty;
     private string _batchNotes = "";
     private string _batchId = "";
     private string _notes = "";
@@ -27,6 +46,12 @@ public sealed partial class BatchJournal : IAsyncDisposable
 
     protected override Task OnParametersSetAsync() => RunAsync(async () =>
     {
+        _baselinesReady = false;
+        _batchId = "";
+        _batchNotes = "";
+        _correctingBatchId = null;
+        _batchCorrectionReason = "";
+        ResetEvaluation();
         await ReloadAsync();
         _scores = _recipe?.Metrics.Select(m => new ScoreInput { Id = m.Id, Name = m.Name }).ToList() ?? [];
     });
@@ -41,6 +66,30 @@ public sealed partial class BatchJournal : IAsyncDisposable
             _tastedDate ??= today;
             DatesReady = true;
             StateHasChanged();
+        }
+        if (DatesReady && !Busy && _version is not null && !_baselinesReady)
+        {
+            _savedBatch = BatchState;
+            _savedEvaluation = EvaluationState;
+            _baselinesReady = true;
+            StateHasChanged();
+        }
+        _navigationInterop ??= new EditorNavigationInterop(JavaScript);
+        await _navigationInterop.UpdateAsync(_editor, Dirty, _savedRevision);
+        if (!GuardReady)
+        {
+            GuardReady = true;
+            StateHasChanged();
+        }
+        if (_focusTasting)
+        {
+            _focusTasting = false;
+            await _tastingHeading.FocusAsync();
+        }
+        if (_focusBatch)
+        {
+            _focusBatch = false;
+            await _batchHeading.FocusAsync();
         }
     }
 
@@ -57,11 +106,24 @@ public sealed partial class BatchJournal : IAsyncDisposable
     private Task MakeAsync() => RunAsync(async () =>
     {
         if (_recipe is null || _madeDate is not { } madeDate) { return; }
-        var result = await Notebook.MakeBatchAsync(RecipeId, VersionId, new(_recipe.Revision, Date(madeDate), _batchNotes));
+        var request = new BatchRequest(_recipe.Revision, Date(madeDate), _batchNotes);
+        var result = _correctingBatchId is { } batchId
+            ? await Notebook.CorrectBatchAsync(RecipeId, VersionId, batchId, new(request, _batchCorrectionReason))
+            : await Notebook.MakeBatchAsync(RecipeId, VersionId, request);
         if (Saved(result) && result is ChangeSaved saved)
         {
-            _batchId = saved.Id.ToString();
+            if (_correctingBatchId is not null)
+            {
+                ResetBatchCorrection();
+            }
+            else if (!EvaluationDirty && _correctingId is null)
+            {
+                _batchId = saved.Id.ToString();
+                _savedEvaluation = EvaluationState;
+            }
             _batchNotes = "";
+            _savedBatch = BatchState;
+            _savedRevision++;
             await ReloadAsync();
         }
     });
@@ -69,21 +131,78 @@ public sealed partial class BatchJournal : IAsyncDisposable
     private Task EvaluateAsync() => RunAsync(async () =>
     {
         if (_recipe is null || _tastedDate is not { } tastedDate || !Guid.TryParse(_batchId, out var batchId)) { return; }
+        if (_scores.Any(s => !s.Valid))
+        {
+            Error = "Scores must be whole numbers from 1 to 10. Correct the highlighted scores, or leave them blank.";
+            return;
+        }
         var request = new EvaluationRequest(_recipe.Revision, Date(tastedDate), _notes, _nextIdea,
             _scores.Select(s => new MetricScore(s.Id, s.Score, s.Notes)).ToArray());
-        if (Saved(await Notebook.EvaluateAsync(RecipeId, VersionId, batchId, request)))
+        var result = _correctingId is { } evaluationId
+            ? await Notebook.CorrectEvaluationAsync(RecipeId, VersionId, batchId, evaluationId, new(request, _correctionReason))
+            : await Notebook.EvaluateAsync(RecipeId, VersionId, batchId, request);
+        if (Saved(result))
         {
-            _notes = "";
-            _nextIdea = "";
-            foreach (var score in _scores) { score.Score = null; score.Notes = ""; }
+            ResetEvaluation();
             await ReloadAsync();
         }
     });
+
+    private async Task CorrectAsync(Guid batchId, BatchEvaluation evaluation)
+    {
+        if (EvaluationDirty && _navigationInterop is not null && !await _navigationInterop.ConfirmDiscardAsync()) { return; }
+        _correctingId = evaluation.Id;
+        _batchId = batchId.ToString();
+        _tastedDate = evaluation.TastedAt.Date;
+        _notes = evaluation.Notes;
+        _nextIdea = evaluation.NextIdea;
+        _correctionReason = "";
+        foreach (var score in _scores)
+        {
+            var saved = evaluation.Scores.FirstOrDefault(s => s.MetricId == score.Id);
+            score.Text = saved?.Score?.ToString(CultureInfo.InvariantCulture) ?? "";
+            score.Notes = saved?.Notes ?? "";
+        }
+        _savedEvaluation = EvaluationState;
+        _savedRevision++;
+        _focusTasting = true;
+        Error = null;
+        Status = null;
+    }
+
+    private async Task CancelCorrectionAsync()
+    {
+        if (EvaluationDirty && _navigationInterop is not null && !await _navigationInterop.ConfirmDiscardAsync()) { return; }
+        ResetEvaluation();
+    }
+
+    private void ResetEvaluation()
+    {
+        _correctingId = null;
+        _correctionReason = "";
+        _notes = "";
+        _nextIdea = "";
+        foreach (var score in _scores) { score.Text = ""; score.Notes = ""; }
+        _savedEvaluation = EvaluationState;
+        _savedRevision++;
+    }
+
+    private async Task BeforeNavigateAsync(LocationChangingContext context)
+    {
+        if (_navigationInterop is not null && !await _navigationInterop.ConfirmDiscardAsync())
+        {
+            context.PreventNavigation();
+        }
+    }
 
     private static DateTimeOffset Date(DateTime value) => new(DateTime.SpecifyKind(value.Date, DateTimeKind.Utc));
 
     public async ValueTask DisposeAsync()
     {
+        if (_navigationInterop is not null)
+        {
+            await _navigationInterop.DisposeAsync();
+        }
         if (_dateInterop is not null)
         {
             await _dateInterop.DisposeAsync();
@@ -95,7 +214,9 @@ public sealed partial class BatchJournal : IAsyncDisposable
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = "";
-        public int? Score { get; set; }
+        public string Text { get; set; } = "";
+        public int? Score => int.TryParse(Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) ? value : null;
+        public bool Valid => string.IsNullOrWhiteSpace(Text) || Score is >= 1 and <= 10;
         public string Notes { get; set; } = "";
     }
 }

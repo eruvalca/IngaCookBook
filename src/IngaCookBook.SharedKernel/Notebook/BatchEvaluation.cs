@@ -4,4 +4,5 @@ namespace IngaCookBook.SharedKernel.Notebook;
 public sealed record BatchEvaluation(Guid Id, DateTimeOffset TastedAt, string Notes, string NextIdea, IReadOnlyList<MetricScore> Scores)
 {
     public DateTimeOffset RecordedAt { get; init; } = DateTimeOffset.UtcNow;
+    public IReadOnlyList<EvaluationCorrection> Corrections { get; init; } = [];
 }

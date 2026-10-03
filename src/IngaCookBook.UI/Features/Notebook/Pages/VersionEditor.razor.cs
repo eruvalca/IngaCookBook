@@ -3,14 +3,13 @@ using IngaCookBook.SharedKernel.Notebook;
 using IngaCookBook.UI.Features.Notebook.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
-using Microsoft.FluentUI.AspNetCore.Components;
 using Microsoft.JSInterop;
 
 namespace IngaCookBook.UI.Features.Notebook.Pages;
 
 public sealed partial class VersionEditor : IAsyncDisposable
 {
-    private readonly FluentNumberInputCultureInfo _quantityCulture = new(6);
+    private readonly QuantityInputCulture _quantityCulture = new();
     [Parameter] public Guid RecipeId { get; set; }
     [Parameter] public Guid VersionId { get; set; }
     [Inject] private IJSRuntime JavaScript { get; set; } = default!;
@@ -32,7 +31,9 @@ public sealed partial class VersionEditor : IAsyncDisposable
     private IngredientCost Cost => RecipeCosting.Calculate(_draft.ToContent());
     private bool Dirty => _recipe is not null && (!string.Equals(_saved, JsonSerializer.Serialize(_draft), StringComparison.Ordinal)
         || !string.IsNullOrEmpty(_correctionReason));
-    private IReadOnlyList<RecipeDifference> Changes => _parent is null ? [] : RecipeComparison.Compare(_parent.Content, _draft.ToContent());
+    private RecipeContent? ComparisonBaseline => _version?.IsLocked == true ? _version.Content : _parent?.Content;
+    private IReadOnlyList<RecipeDifference> Changes => ComparisonBaseline is { } baseline
+        ? RecipeComparison.Compare(baseline, _draft.ToContent()) : [];
     private IEnumerable<MetricOption> MetricOptions => new[] { new MetricOption("", "Choose a focus (optional)") }
         .Concat(_recipe?.Metrics.Select(m => new MetricOption(m.Id.ToString(), m.Name)) ?? []);
 

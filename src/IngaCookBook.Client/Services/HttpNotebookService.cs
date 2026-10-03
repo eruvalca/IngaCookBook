@@ -39,11 +39,17 @@ internal sealed class HttpNotebookService(HttpClient http) : INotebookService
     public Task<NotebookChange> MakeBatchAsync(Guid recipeId, Guid versionId, BatchRequest request, CancellationToken cancellationToken = default) =>
         SendAsync(HttpMethod.Post, $"{VersionPath(recipeId, versionId)}/batches", request, cancellationToken);
 
+    public Task<NotebookChange> CorrectBatchAsync(Guid recipeId, Guid versionId, Guid batchId, BatchCorrectionRequest request, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Put, $"{VersionPath(recipeId, versionId)}/batches/{batchId}", request, cancellationToken);
+
     public Task<NotebookChange> EvaluateAsync(Guid recipeId, Guid versionId, Guid batchId, EvaluationRequest request, CancellationToken cancellationToken = default) =>
         SendAsync(HttpMethod.Post, $"{VersionPath(recipeId, versionId)}/batches/{batchId}/evaluations", request, cancellationToken);
 
     public Task<NotebookChange> SetStandardAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken = default) =>
         SendAsync(HttpMethod.Post, $"{VersionPath(recipeId, versionId)}/standard", request, cancellationToken);
+
+    public Task<NotebookChange> CorrectEvaluationAsync(Guid recipeId, Guid versionId, Guid batchId, Guid evaluationId, EvaluationCorrectionRequest request, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Put, $"{VersionPath(recipeId, versionId)}/batches/{batchId}/evaluations/{evaluationId}", request, cancellationToken);
 
     public Task<NotebookChange> SaveSettingsAsync(Guid recipeId, RecipeSettingsRequest request, CancellationToken cancellationToken = default) =>
         SendAsync(HttpMethod.Put, $"api/notebook/recipes/{recipeId}/settings", request, cancellationToken);

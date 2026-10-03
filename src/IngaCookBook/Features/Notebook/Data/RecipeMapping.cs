@@ -14,6 +14,8 @@ internal static class RecipeMapping
         .Include(r => r.Versions).ThenInclude(v => v.Steps)
         .Include(r => r.Versions).ThenInclude(v => v.Photos)
         .Include(r => r.Versions).ThenInclude(v => v.Corrections)
+        .Include(r => r.Versions).ThenInclude(v => v.Batches).ThenInclude(b => b.Corrections)
+        .Include(r => r.Versions).ThenInclude(v => v.Batches).ThenInclude(b => b.Evaluations).ThenInclude(e => e.Corrections)
         .Include(r => r.Versions).ThenInclude(v => v.Batches).ThenInclude(b => b.Evaluations).ThenInclude(e => e.Scores);
 
     internal static RecipeDocument Read(RecipeEntity entity) => new()
@@ -50,10 +52,18 @@ internal static class RecipeMapping
             Ingredients = entity.Ingredients.OrderBy(i => i.Position).Select(ReadIngredient).ToArray(),
             Steps = entity.Steps.OrderBy(s => s.Position).Select(s => new PreparationStep(s.RowId, s.Instruction, s.Notes)).ToArray(),
         },
-        Batches = entity.Batches.OrderBy(b => b.MadeAt).Select(b => new RecipeBatch(b.Id, b.MadeAt, b.Notes,
+        Batches = entity.Batches.OrderBy(b => b.Position).Select(b => new RecipeBatch(b.Id, b.MadeAt, b.Notes,
             b.Evaluations.OrderBy(e => e.RecordedAt).Select(e => new BatchEvaluation(e.Id, e.TastedAt, e.Notes, e.NextIdea,
                 e.Scores.Select(s => new MetricScore(s.MetricId, s.Score, s.Notes)).ToArray())
-            { RecordedAt = e.RecordedAt }).ToArray())).ToArray(),
+            {
+                RecordedAt = e.RecordedAt,
+                Corrections = e.Corrections.OrderBy(c => c.CorrectedAt).Select(c => new EvaluationCorrection(
+                    c.Id, c.CorrectedAt, c.Reason, JsonSerializer.Deserialize<EvaluationSnapshot>(c.PreviousContent, _json)!)).ToArray(),
+            }).ToArray())
+        {
+            Corrections = b.Corrections.OrderBy(c => c.CorrectedAt).Select(c => new BatchCorrection(
+                c.Id, c.CorrectedAt, c.Reason, c.PreviousMadeAt, c.PreviousNotes)).ToArray(),
+        }).ToArray(),
         Photos = entity.Photos.OrderBy(p => p.CreatedAt).Select(p => new RecipePhoto(p.Id, p.Caption, p.ContentType, p.CreatedAt)).ToArray(),
         Corrections = entity.Corrections.OrderBy(c => c.CorrectedAt).Select(c => new VersionCorrection(c.CorrectedAt, c.Reason, Deserialize(c.PreviousContent)!)).ToArray(),
     };
@@ -108,7 +118,7 @@ internal static class RecipeMapping
             () => new() { Id = Guid.NewGuid() }, ApplyIngredient);
         Sync(entity.Steps, version.Content.Steps, e => e.RowId, s => s.Id, () => new() { Id = Guid.NewGuid() },
             (e, s, i) => { e.RowId = s.Id; e.Position = i; e.Instruction = s.Instruction; e.Notes = s.Notes; });
-        Sync(entity.Batches, version.Batches, e => e.Id, b => b.Id, () => new(), (e, b, _) => ApplyBatch(e, b));
+        Sync(entity.Batches, version.Batches, e => e.Id, b => b.Id, () => new(), (e, b, position) => { e.Position = position; ApplyBatch(e, b); });
         Sync(entity.Photos, version.Photos, e => e.Id, p => p.Id, () => new(),
             (e, p, _) => { e.Id = p.Id; e.Caption = p.Caption; e.ContentType = p.ContentType; e.CreatedAt = p.CreatedAt; });
         foreach (var correction in version.Corrections.Where(c => !entity.Corrections.Any(e => e.CorrectedAt == c.CorrectedAt)))
@@ -143,6 +153,14 @@ internal static class RecipeMapping
         entity.Id = batch.Id;
         entity.MadeAt = batch.MadeAt;
         entity.Notes = batch.Notes;
+        Sync(entity.Corrections, batch.Corrections, e => e.Id, c => c.Id, () => new(), (e, c, _) =>
+        {
+            e.Id = c.Id;
+            e.CorrectedAt = c.CorrectedAt;
+            e.Reason = c.Reason;
+            e.PreviousMadeAt = c.PreviousMadeAt;
+            e.PreviousNotes = c.PreviousNotes;
+        });
         Sync(entity.Evaluations, batch.Evaluations, e => e.Id, e => e.Id, () => new(), (e, source, _) =>
         {
             e.Id = source.Id;
@@ -150,6 +168,13 @@ internal static class RecipeMapping
             e.RecordedAt = source.RecordedAt;
             e.Notes = source.Notes;
             e.NextIdea = source.NextIdea;
+            Sync(e.Corrections, source.Corrections, c => c.Id, c => c.Id, () => new(), (c, correction, _) =>
+            {
+                c.Id = correction.Id;
+                c.CorrectedAt = correction.CorrectedAt;
+                c.Reason = correction.Reason;
+                c.PreviousContent = JsonSerializer.Serialize(correction.PreviousContent, _json);
+            });
             Sync(e.Scores, source.Scores, s => s.MetricId, s => s.MetricId, () => new() { Id = Guid.NewGuid() },
                 (s, score, _) => { s.MetricId = score.MetricId; s.Score = score.Score; s.Notes = score.Notes; });
         });

@@ -7,10 +7,10 @@ the CLI and editor find `global.json` and `IngaCookBook.slnx`.
 | Project | Scope |
 | --- | --- |
 | `IngaCookBook.UnitTests` | Account services and extensions, outcome decoding, redirects, authentication-state revalidation, Identity endpoint behavior, service defaults, recipe comparisons, validation, photo signatures, and cost calculations. |
-| `IngaCookBook.ComponentTests` | Account workflows, shared components, navigation, error request IDs, Counter, notebook action rendering/conflicts, save-time input locking, browser-date initialization and retained selections, partial upload failures, and nested recipe sheets, using bUnit. |
-| `IngaCookBook.IntegrationTests` | Real PostgreSQL via Testcontainers: migrations, Identity, recipe lifecycles, workspace isolation, concurrency, metric deletion, saved nested formulations, account-deletion transactions, and durable photo cleanup/retries. |
+| `IngaCookBook.ComponentTests` | Account workflows, shared components, navigation, error request IDs, Counter, notebook action rendering/conflicts, save-time input locking, score validation, correction forms, browser-date initialization and retained selections, partial upload failures, and nested recipe sheets, using bUnit. |
+| `IngaCookBook.IntegrationTests` | Real PostgreSQL via Testcontainers: migrations (including existing batch-order backfill), Identity, recipe lifecycles, audited batch/tasting corrections and chronology, workspace isolation, concurrency, metric deletion (including correction snapshots), saved nested formulations, account-deletion transactions, and durable photo cleanup/retries. |
 | `IngaCookBook.AspireIntegrationTests` | The real AppHost, database/migration startup dependencies, readiness, resource endpoints, cross-process HTTP behavior, and the hosted cleanup worker deleting scoped Azurite blobs/snapshots. |
-| `IngaCookBook.PlaywrightTests` | Real Chromium: desktop/mobile navigation, Fluent controls, recipe creation/editing, unsaved-editor link/history protection, browser-local batch/tasting dates under both Auto renderers, Azure-compatible photo uploads, comparison, printing, themes, and antiforgery. |
+| `IngaCookBook.PlaywrightTests` | Real Chromium: desktop/mobile navigation, Fluent controls, recipe creation/editing, compact precise quantities, unsaved creation/settings/editor/journal link/history protection, browser-local dates and timestamp display, invalid scores and audited batch/tasting corrections under both Auto renderers, Azure-compatible photo uploads, comparison, printing, themes, and antiforgery. |
 
 `IngaCookBook.Testing` is a shared support library, not a test project. It configures
 isolated AppHost builders for the Aspire and Playwright projects.

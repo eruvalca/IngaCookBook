@@ -9,4 +9,5 @@ internal sealed class EvaluationEntity
     public string Notes { get; set; } = "";
     public string NextIdea { get; set; } = "";
     public List<ScoreEntity> Scores { get; set; } = [];
+    public List<EvaluationCorrectionEntity> Corrections { get; set; } = [];
 }

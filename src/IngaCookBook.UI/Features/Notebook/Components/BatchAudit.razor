@@ -1,0 +1,8 @@
+@foreach (var correction in Corrections)
+{
+    <details class="batch-correction">
+        <summary>Batch corrected <LocalDate Value="correction.CorrectedAt" /> · @correction.Reason</summary>
+        <h4>Batch before this correction · @correction.PreviousMadeAt.ToString("MMM d, yyyy")</h4>
+        <p class="preserve-lines">@correction.PreviousNotes</p>
+    </details>
+}

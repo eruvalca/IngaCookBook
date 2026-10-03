@@ -1,3 +1,4 @@
+using System.Text.Json;
 using IngaCookBook.SharedKernel.Notebook;
 
 namespace IngaCookBook.UI.Features.Notebook.Pages;
@@ -10,10 +11,12 @@ public sealed partial class NewRecipe
     private bool _hasWorkspace;
     private bool _loaded;
     private readonly List<MetricInput> _metrics = [new() { Name = "Overall satisfaction" }];
+    protected override string FormState => JsonSerializer.Serialize(new { _name, _description, _metrics });
 
     protected override async Task OnInitializedAsync()
     {
         await RunAsync(async () => { _hasWorkspace = await Notebook.GetWorkspaceAsync() is not null; _loaded = true; });
+        CaptureSavedState();
     }
 
     private void AddMetric() => _metrics.Add(new());
@@ -31,6 +34,7 @@ public sealed partial class NewRecipe
         if (Saved(result) && result is ChangeSaved created)
         {
             var recipe = await Notebook.GetRecipeAsync(created.Id);
+            await AcceptChangesAsync();
             Navigation.NavigateTo($"/recipes/{created.Id}/versions/{recipe!.Versions[0].Id}/edit");
         }
     });

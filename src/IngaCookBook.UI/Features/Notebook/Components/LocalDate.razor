@@ -1,0 +1,2 @@
+@using System.Globalization
+<time datetime="@Value.ToString("O", CultureInfo.InvariantCulture)" data-local-date>@Value.UtcDateTime.ToString("MMM d, yyyy", CultureInfo.InvariantCulture) UTC</time>

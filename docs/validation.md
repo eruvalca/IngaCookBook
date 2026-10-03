@@ -1,5 +1,12 @@
 # Recipe notebook verification
 
+The separate [exploratory kitchen workflow log](workflow-qa.md) retains the initial
+browser observations, reproduction steps, and screenshots, plus the October 3
+follow-up fixes and their regression coverage. Its second exploratory pass on
+October 3 records fresh workflow evidence, unsaved-form finding B3, and batch
+correction improvement I5. Both are addressed in its second findings follow-up,
+with the regression evidence below.
+
 Validation uses the repository's .NET 10 MTP/xUnit/Shouldly stack. PostgreSQL
 tests own disposable Testcontainers. Aspire and Chromium tests run isolated
 copies of the actual AppHost, remove development volume mounts, and dispose
@@ -19,7 +26,14 @@ their resources. No test targets a development database.
 | Concurrency and SQL constraints | `NotebookPersistenceTests.ConcurrentEditsAllowOnlyOneWriterAndRetainItsContent` races independent contexts; `DatabaseConstraintsRejectInvalidAmountsAndScores` deliberately bypasses service validation and verifies PostgreSQL constraint rejection and retained data. |
 | Inputs cannot change during a save/reload | `NotebookFormSaveTests` holds writes and reloads open, asserts Fluent/native inputs are disabled, and checks re-enabling and retained values after success/rejection. The Chromium workflow holds a WebAssembly save request open and checks the actual native controls at both widths. |
 | Unsaved editor protection across enhanced SSR navigation | `NotebookWorkflowTests.EditorProtectsEnhancedNavigationAndJournalUsesBrowserDates` cancels version/sidebar links, reload, and Back/Forward, asserts retained inputs and document identity, confirms discarding, and verifies that saved edits can leave without a prompt under Server and WebAssembly. |
+| B3: protect recipe creation and settings inputs | `NewRecipeRetainsRejectedInputAndClearsGuardBeforeSuccessfulNavigation` checks rejected input and successful creation navigation; `SettingsMetricEditsRemainGuardedAfterRejectionAndClearAfterSave` checks structural edits, conflicts, and saved criteria. The Server/WebAssembly browser regression checks links, reload, Back/Forward, rejected saves, successful saves, and confirmed discard on these screens. |
 | Browser-local dates and retained date selections | The same Chromium regression fixes the browser clock near midnight UTC in Chicago, records a batch/tasting, and checks the persisted local date under both renderers. `NotebookFormSaveTests.JournalWaitsForBrowserDateAndPreservesSelectedDatesAfterSaving` verifies blank disabled dates until browser initialization and retained manual dates after a save/reload. |
+| Local timestamp display with static SSR fallback | `NotebookFormSaveTests.HistoryTimestampHasAnExplicitUtcFallbackAndAnUnambiguousInstant` checks UTC fallback text and an offset-bearing `datetime`; the browser regression tests a known UTC boundary in a history timestamp after enhanced navigation. |
+| Journal input protection and explicit score validation | The Server/WebAssembly browser regression checks invalid `11` is retained and unsaved tasting/batch notes survive canceled links, reload, Back/Forward, and saves to the other form. `JournalRetainsInvalidScoresAndDoesNotSaveThem` checks 0, 11, fractions, and text; `JournalSavesBlankAndBoundaryScoresWithoutChangingTheirMeaning` checks blank, 1, and 10. |
+| Audited tasting corrections | `TastingCorrectionsPreserveHistoryAndOrderAndRemoveDeletedCriteriaFromAudit` verifies dates, notes, scores, prior snapshots, stable identity/order, repeated corrections, concurrency rejection, and criterion removal. `InvalidTastingCorrectionsLeaveOriginalAndAuditUntouched` checks invalid reasons/payloads/scores/dates, missing IDs, and another owner. The component test retains inputs after conflict; the browser saves and reloads a correction under both renderers. |
+| I5: audited batch corrections with stable identity and chronology | `BatchCorrectionsRetainIdentityOrderTastingsAndSuccessiveHistory` checks successive corrections, prior values, stable numbers and tastings, the exact tasting-date boundary, and stale revisions. `InvalidBatchCorrectionsLeaveDateNotesTastingsAndHistoryUntouched` covers eight invalid/unauthorized cases. `BatchCorrectionRetainsConflictInputsAndDoesNotCreateAnotherBatch` checks exact request fields and no new batch; the browser regression recovers from a mistaken date while retaining an unfinished tasting, then reloads both records and their audit. |
+| Preserve existing batch order during schema upgrade | `BatchPositionMigrationPreservesExistingChronology` seeds batches in the preceding schema in reverse insertion order, applies the generated migration, then corrects a date across the other batch's date and verifies stable order. Only its disposable database is migrated backward. |
+| Correcting a preserved recipe without experiment guidance | `PreservedVariationCorrectionNeedsOnlyItsCorrectionReason` persists a yield correction on a previously changed variation; `PreservedVersionShowsItsCorrectionDiffWithoutExperimentWarning` checks only the correction diff appears. Existing draft-variation guidance tests remain. |
 | Precise nested recipe costs | `NotebookRulesTests.NestedRecipeCostsRoundOnlyForDisplay` pins a $4.125 nested cost, $16.50 at four times the yield, and $4.125 when reused at another nesting level. |
 | Account deletion and durable photo cleanup | `PhotoCleanupTests` checks real Identity deletion, cleanup retries and due times, another owner's retained data, concurrency rejection, and rollback when the queue insert fails. PostgreSQL retries are enabled as in the app. The Aspire startup test waits for the actual worker to remove a queued blob and its snapshot while retaining another prefix. |
 | Recoverable Azure failures | `PhotoStorageFailureTests` injects ordinary/aggregate Azure failures and failed compensation, then checks rejected status, retained earlier photos, unchanged metadata, exact cleanup keys, and eventual cleanup. Unexpected exceptions, cancellation, and mixed aggregates remain errors rather than successful saves. The upload component checks partial-success messaging and stops later files. |
@@ -39,35 +53,57 @@ layout, storage, or PostgreSQL checks.
 
 ## Commands
 
-The final local run passed **475 tests**, with **0 failed** and **0 skipped**:
+The final October 3 runs after both QA follow-ups passed **506 tests** in total, with **0 failed** and
+**0 skipped**, across separate project runs and four browser groups:
 
 | Suite | Passed |
 | --- | ---: |
 | Unit | 206 |
-| Component | 243 |
-| PostgreSQL integration | 17 |
+| Component | 256 |
+| PostgreSQL integration | 35 |
 | Aspire integration | 1 |
 | Chromium browser | 8 |
 
 The full solution build completed with zero warnings and zero errors. The
-formatter's verification pass was clean. The browser workflow also verifies that
-a quantity of `100.1256 g` survives a save and appears unchanged in comparison,
-and comparison tables fit the viewport without hiding columns behind scrolling.
+formatter's verification pass was clean. The browser workflow verifies compact
+six-place entry, that `100.1256 g` survives a save and appears unchanged in
+comparison, and that comparison tables fit the viewport without hiding columns
+behind scrolling.
 
 ```powershell
-dotnet format IngaCookBook.slnx --severity warn
-dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
+dotnet format IngaCookBook.slnx --severity warn --no-restore
+dotnet format IngaCookBook.slnx --severity warn --verify-no-changes --no-restore
 dotnet build IngaCookBook.slnx
-dotnet test --solution IngaCookBook.slnx --no-build
+dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.IntegrationTests/IngaCookBook.IntegrationTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-restore --filter-method '*EditorProtectsEnhancedNavigationAndJournalUsesBrowserDates'
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-build --filter-method '*CookCanRecordEvaluateCompareAndPrintAnExperiment'
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-build --filter-method '*FluentNavigationPreservesDocumentAndCounterWorks'
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-build --filter-method '*ArtifactFailuresPreserveOriginalExceptionAndAttemptBothCaptures'
+dotnet test --project tests/IngaCookBook.AspireIntegrationTests/IngaCookBook.AspireIntegrationTests.csproj --no-build
 ```
 
-`--no-build` is used only after a successful matching build. Browser screenshots,
-traces, and test logs remain under ignored test-output directories. The existing
-Identity files mostly have formatter-required import ordering. Account deletion
-now calls the transactional deletion service; its password checks, failed-delete
-behavior, sign-out ordering, and redirects remain covered by component tests.
+Each browser group executed two cases. The first expanded guard run had two
+test failures because enhanced navigation changed the URL before replacing the
+page content. Waiting for destination UI fixed the test race; its final run
+passed both renderers. A sandboxed command could not read the user NuGet config;
+rerunning with the existing tool permissions succeeded.
 
-Documentation review updated the product guide, runtime/storage/migration
-instructions, and test-layer descriptions. Existing agent/build conventions
-remain applicable. Deployment, real Azure credentials, production email, backup
-operations, and load testing are outside this local implementation verification.
+Before this second follow-up, an earlier concurrent full-solution run reported
+481 passed, 7 failed, and 0 skipped, with PostgreSQL readiness and Aspire startup
+failures before the affected browser scenarios. The final separated runs above
+passed all suites without changing their parallelism settings. They are an
+aggregate result, not a clean concurrent full-solution run.
+
+`--no-build` is used only after a successful matching build. Final infrastructure
+logs are under ignored `TestResults/round2-fixes/*.log`; the earlier six-finding
+logs remain under `TestResults/findings-fixes/final-*.log`. Browser screenshots
+and traces remain under ignored test-output directories. Test fixtures disposed
+their resources; the migration-generation Aspire run was stopped normally.
+
+Documentation review updated the product guide, exploratory findings follow-up,
+validation evidence, and test-layer descriptions. Existing setup, agent, and
+build guidance remains accurate and unchanged. Deployment, real Azure
+credentials, production email, backup operations, and load testing are outside
+this local implementation verification.

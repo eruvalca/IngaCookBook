@@ -48,7 +48,7 @@
                         <span class="badge">@(version.IsLocked ? "Preserved" : "Draft")</span>
                         @if (recipe.StandardVersionId == version.Id) { <span class="badge standard">Current standard</span> }
                         <h3><a href="@VersionUrl(version)">V@(version.Number) · @version.Content.Label</a></h3>
-                        <p class="muted">@version.CreatedAt.ToString("MMM d, yyyy") · @(parent is null ? "The starting point" : $"From V{parent.Number}")</p>
+                        <p class="muted"><LocalDate Value="version.CreatedAt" /> · @(parent is null ? "The starting point" : $"From V{parent.Number}")</p>
                         @if (!string.IsNullOrWhiteSpace(version.Content.Hypothesis)) { <p>@version.Content.Hypothesis</p> }
                         @if (changes.Count > 0)
                         {

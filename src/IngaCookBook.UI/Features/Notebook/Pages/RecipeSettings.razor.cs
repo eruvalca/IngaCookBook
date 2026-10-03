@@ -1,3 +1,4 @@
+using System.Text.Json;
 using IngaCookBook.SharedKernel.Notebook;
 using Microsoft.AspNetCore.Components;
 
@@ -12,6 +13,7 @@ public sealed partial class RecipeSettings
     private List<MetricInput> _metrics = [];
     private bool _confirmRemoval;
     private string[] RemovedNames => GetRemovedNames();
+    protected override string FormState => JsonSerializer.Serialize(new { _name, _description, _metrics, _confirmRemoval });
 
     protected override Task OnParametersSetAsync() => RunAsync(async () =>
     {
@@ -21,6 +23,8 @@ public sealed partial class RecipeSettings
             _name = _recipe.Name;
             _description = _recipe.Description;
             _metrics = _recipe.Metrics.Select(m => new MetricInput { Id = m.Id, Name = m.Name }).ToList();
+            _confirmRemoval = false;
+            CaptureSavedState();
         }
     });
 
@@ -39,6 +43,7 @@ public sealed partial class RecipeSettings
             _recipe = await Notebook.GetRecipeAsync(RecipeId);
             _metrics = _recipe!.Metrics.Select(m => new MetricInput { Id = m.Id, Name = m.Name }).ToList();
             _confirmRemoval = false;
+            await AcceptChangesAsync();
         }
     });
 
