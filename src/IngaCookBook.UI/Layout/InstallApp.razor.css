@@ -1,0 +1,23 @@
+.install-app {
+    margin: var(--spacingVerticalL) var(--spacingHorizontalL);
+    padding-top: var(--spacingVerticalM);
+    border-top: 1px solid var(--colorNeutralStroke2);
+    font-size: var(--fontSizeBase200);
+    line-height: var(--lineHeightBase300);
+}
+
+.install-app summary {
+    cursor: pointer;
+    color: var(--colorBrandForegroundLink);
+    min-height: 2.75rem;
+    align-content: center;
+}
+
+.install-app summary:focus-visible {
+    outline: 2px solid var(--colorStrokeFocus2);
+    outline-offset: 2px;
+}
+
+.install-note {
+    color: var(--colorNeutralForeground2);
+}

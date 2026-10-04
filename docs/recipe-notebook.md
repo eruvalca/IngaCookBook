@@ -205,6 +205,26 @@ successful writes return `ChangeSaved`. New metric identities are assigned by th
 server. Reload after writes to get the canonical metric IDs and new revision.
 Development OpenAPI is at `/openapi/v1.json`; see the [HTTP examples](../src/IngaCookBook/Notebook.http).
 
+## Installing the notebook
+
+Open **Install app** below Appearance in the navigation to add Inga’s to a home
+screen or desktop. Supported browsers offer an install button; other browsers
+show menu instructions. The Kitchen Notebook icon identifies the installed app.
+It opens the recipe library, asking for sign-in when necessary. Installation
+still requires an internet connection to use recipes and save changes.
+
+When a new release is detected, a notice offers **Refresh app** or **Later**.
+Finish and save an unfinished recipe or tasting before refreshing. The app never
+refreshes automatically; its existing unsaved-input confirmation also applies to
+this refresh action. Choosing Later leaves the current work in place.
+If a server restart ends the current session, choose **Review my inputs** to copy
+unfinished notes before refreshing. That session can no longer save changes.
+The **Refresh app** notice stays at the top while you review your inputs. Once
+you have copied what you need, use it to reconnect; canceling the unsaved-changes
+confirmation keeps your inputs and the notice available.
+See [installation setup](../README.md#installation-and-app-updates) for hosting,
+browser support, icons, and update behavior.
+
 ## Release boundaries
 
 No offline mode, sharing, imports, inventory, nutrition, quantity scaling, or

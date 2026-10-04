@@ -2,6 +2,7 @@ using IngaCookBook.Components;
 using IngaCookBook.Data;
 using IngaCookBook.Features.Account.Endpoints;
 using IngaCookBook.Features.Account.Services;
+using IngaCookBook.Features.Installation;
 using IngaCookBook.Features.Notebook.Endpoints;
 using IngaCookBook.Features.Notebook.Services;
 using IngaCookBook.ServiceDefaults;
@@ -24,6 +25,7 @@ builder.Services.AddScoped<IRecipePhotoStore, AzureRecipePhotoStore>();
 builder.Services.AddScoped<PhotoCleanupProcessor>();
 builder.Services.AddHostedService<PhotoCleanupWorker>();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<ApplicationRelease>();
 builder.Services.AddScoped<IAccountDeletionService, AccountDeletionService>();
 
 // Add services to the container.
@@ -98,6 +100,11 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+app.MapGet("/app-version", (HttpContext context, ApplicationRelease release) =>
+{
+    context.Response.Headers.CacheControl = "no-store";
+    return TypedResults.Text(release.Id);
+}).WithSummary("Check for a new application release");
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()

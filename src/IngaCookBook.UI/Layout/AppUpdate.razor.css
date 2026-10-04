@@ -1,0 +1,11 @@
+.app-update {
+    margin-bottom: var(--spacingVerticalXL);
+}
+
+.app-update p {
+    margin-top: 0;
+}
+
+@media print {
+    .app-update { display: none; }
+}

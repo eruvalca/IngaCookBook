@@ -5,20 +5,26 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
+    <meta name="application-name" content="Inga’s Notebook" />
+    <meta name="apple-mobile-web-app-title" content="Inga’s" />
+    <meta name="theme-color" content="#FAF5ED" />
+    <meta name="app-release" content="@Release.Id" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
     <script src="@Assets["appearance-boot.js"]"></script>
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["_content/Microsoft.FluentUI.AspNetCore.Components/css/default-fuib.css"]" />
     <link rel="stylesheet" href="@Assets["IngaCookBook.styles.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <ImportMap />
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="@Assets["favicon.png"]" />
     <HeadOutlet />
 </head>
 
 @* Load the Fluent baseline above app.css instead of reinjecting it after our overrides. *@
 <body data-theme-color="#E4786D" no-fuib-style>
-    <Routes />
     <ReconnectModal />
+    <Routes />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="@Assets["Features/Account/Components/PasskeySubmit.razor.js"]" type="module"></script>
 </body>

@@ -21,6 +21,7 @@ export function initializeAppearance(blazor) {
         document.documentElement.dataset.appearance = dark ? 'dark' : 'light';
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
         document.body.dataset.theme = dark ? 'dark' : 'light';
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#262B24' : '#FAF5ED');
         const theme = blazor.theme ?? globalThis.Microsoft?.FluentUI?.Blazor?.Utilities?.Theme;
         theme?.setBrandThemeFromSettings({
             color: '#E4786D', hueTorsion: 0, vibrancy: 0,

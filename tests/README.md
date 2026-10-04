@@ -104,6 +104,34 @@ dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj
 MTP reports exit code 8 (zero tests); the outer `dotnet test` command returns a
 nonzero exit code.
 
+### Installation and update checks
+
+`NotebookWorkflowTests.AppInstallationAndUpdatesPreserveNotebookWork` exercises
+desktop/Interactive Server and mobile/Interactive WebAssembly. It checks the
+served manifest and icon dimensions, anonymous no-store release checks, absence
+of an application service worker, install acceptance/dismissal, theme metadata,
+and enhanced-navigation behavior. A simulated new release must not reload an
+unfinished editor; canceling the existing beforeunload confirmation retains its
+inputs, Later remains dismissed, and an explicit refresh after saving keeps data.
+The test mocks browser-owned install permission events and new-release responses;
+it does not install into the host OS or simulate terminating the backend.
+The framework's rejected-session event is also exercised: the reconnect dialog
+must offer review/copy and explicit refresh, preserving inputs when refresh is
+canceled. With no new release available, reviewing inputs or dismissing the
+dialog with Escape leaves a persistent refresh action. The test cancels that
+action with the keyboard, then accepts it and checks that a fresh document
+restores saved data and clears the recovery notice. This is not a real
+deployment/restart test.
+
+```powershell
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --filter-method '*AppInstallationAndUpdatesPreserveNotebookWork'
+```
+
+Before rollout, also check a published build on a stable trusted HTTPS origin:
+native desktop installation, iPhone/iPad Add to Home Screen, standalone launch
+and login, icon masking, updates with multiple open windows, and server deployment
+reconnection. Desktop Playwright cannot establish native mobile installation.
+
 ## Configuration
 
 ### Choosing an integration layer

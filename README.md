@@ -248,6 +248,47 @@ Setup references: [installation](https://www.fluentui-blazor.net/installation),
 Navigation references: [enhanced navigation](https://learn.microsoft.com/aspnet/core/blazor/fundamentals/navigation?view=aspnetcore-10.0#enhanced-navigation-and-form-handling)
 and [JavaScript with static SSR](https://learn.microsoft.com/aspnet/core/blazor/javascript-interoperability/static-server-rendering?view=aspnetcore-10.0).
 
+## Installation and app updates
+
+The online-only PWA uses `wwwroot/manifest.webmanifest` with a stable `/` identity,
+`/recipes` launch URL, and standalone display. Sign-in redirects still use the
+existing static SSR Identity flow. A stable HTTPS origin reachable from the
+device is required for normal installation; a phone cannot use the development
+machine's localhost address. Installation does not package the server or database.
+
+The navigation's **Install app** disclosure offers a browser install button when
+`beforeinstallprompt` is available, with browser-menu guidance otherwise. On iPhone
+and iPad, use Safari's Share → Add to Home Screen. Installed standalone windows hide
+the install controls. Browser chrome follows the selected light/dark appearance
+where supported. The Kitchen Notebook icon source is
+`assets/branding/kitchen-notebook.png`; on Windows, run
+`pwsh ./scripts/Export-AppIcons.ps1` to reproduce the checked-in favicon, Apple
+touch icon, and 192/512 px regular/maskable PNGs. Preserve the source's generous
+padding so the notebook fits circular masks.
+
+No application service worker or offline cache is registered. Existing .NET
+framework resource caching remains framework-owned; recipe data, account pages,
+and photos continue to require the server. Do not add the standalone Blazor PWA
+template's `index.html` navigation fallback to this SSR application.
+
+`ApplicationRelease` computes a startup fingerprint from server/UI/shared assembly
+identities and the SDK's `IngaCookBook.staticwebassets.endpoints.json` content. The
+SDK manifest must accompany the deployed application so asset-only changes are
+included; assembly identities provide a fallback when the manifest is absent.
+The anonymous, no-store `/app-version` endpoint exposes only this opaque identity.
+Browser checks are bounded and throttled to five minutes, while visible, including
+after enhanced navigation or returning to the app. An update notice offers
+**Refresh app** or **Later**. It never forces a reload; explicit refresh keeps the
+notebook's normal unsaved-input confirmation. Later dismisses that release for
+the current document session, and a subsequent release can show a new notice.
+This improves client refresh behavior, but does not provide server deployment
+draining or preserve an Interactive Server circuit across a server restart.
+If reconnection/resumption is rejected, the connection dialog also requires an
+explicit refresh and offers **Review my inputs** so unsaved notes can be copied.
+A persistent **Refresh app** notice remains available while reviewing inputs,
+including after dismissing the dialog with Escape and when the release is unchanged.
+This keeps the visible page intact; it cannot recover lost server-side state.
+
 ## Resource graph and database
 
 ```text

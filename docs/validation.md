@@ -5,6 +5,46 @@ addresses the four usability findings and applies the notebook design to editing
 tasting, history, comparison, photos, and the library. The original review of
 `21f20bb` remains in the workflow log as the baseline.
 
+## Basic PWA validation — October 4, 2026
+
+The online-only installation and update work uses the selected Kitchen Notebook
+artwork. The focused browser command documented in
+[tests/README.md](../tests/README.md#installation-and-update-checks) passed **2**
+cases (desktop/Server and mobile-width/WebAssembly), with **0 failed, 0 skipped**.
+The scenarios cover served manifest/icon dimensions, anonymous no-store version
+checks, theme metadata, installation prompt dismissal and keyboard acceptance,
+enhanced navigation, safe refresh cancellation, Later dismissal, saved-state
+refresh, and the rejected-session review/copy flow. No browser page errors were
+reported. Screenshots and traces are in ignored `installation-*` test-output
+directories; the successful runner summary is `TestResults/pwa-browser.log`.
+
+`dotnet build IngaCookBook.slnx` passed with **0 warnings, 0 errors**. The complete
+unit and component commands (`dotnet test --project` for their respective
+projects, with `--no-build` after the final solution build) passed **206** and
+**268** tests respectively, both with **0 failed, 0 skipped**.
+
+`dotnet publish src/IngaCookBook/IngaCookBook.csproj -c Release -o TestResults/pwa-publish`
+succeeded. Artifact inspection confirmed the manifest, favicon, Apple/regular/
+maskable icons, installation/update modules, and the SDK static-asset manifest
+used for release identification are present. The publish log is
+`TestResults/pwa-publish.log`. The local publish was not deployed or run.
+
+Installation permissions and newer release responses were simulated; native OS
+installation, real iOS/Android devices, multiple installed windows, and an actual
+deployment/restart remain rollout checks. The browser tests exercise the real
+rejected-session UI event without terminating the backend. No service worker,
+offline recipe storage, or background synchronization was added.
+
+The recovery review follow-up also passed both browser cases (**2 passed,
+0 failed, 0 skipped**). With no new release available, **Review my inputs** and
+Escape leave a persistent refresh notice. Canceling its keyboard-triggered
+refresh retains the notes and document; confirming refresh loads saved data
+and clears the notice. Desktop/mobile `review-inputs-with-refresh.png` screenshots
+were inspected in the new `installation-*` output directories. The solution
+build again reported **0 warnings, 0 errors**; the unit and component runs again
+passed **206** and **268** tests, each with **0 failed, 0 skipped**. This follow-up
+uses the simulated rejected-session event, not an actual backend restart.
+
 ## Section-link validation
 
 `NotebookWorkflowTests.NotebookLinksReachTheirSectionsAndKeepUnsavedInputs` passed
