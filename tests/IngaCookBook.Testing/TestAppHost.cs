@@ -25,7 +25,7 @@ public static class TestAppHost
             {
                 using var diagnostics = new CancellationTokenSource(TimeSpan.FromSeconds(5));
                 var logs = app.Services.GetRequiredService<ResourceLoggerService>();
-                foreach (var name in new[] { "ingacookbook-migrations", "ingacookbook", "postgres", "photostorage" })
+                foreach (var name in new[] { "ingacookbook-migrations", "ingacookbook", "postgres", "photostorage", "mailpit" })
                 {
                     if (app.ResourceNotifications.TryGetCurrentState(name, out var state))
                     {
@@ -48,7 +48,7 @@ public static class TestAppHost
     public static async Task<IDistributedApplicationTestingBuilder> CreateAsync(CancellationToken cancellationToken)
     {
         var builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.IngaCookBook_AppHost>(
-            ["--environment=Development"], cancellationToken);
+            ["--environment=Development", "--Email:Provider=Mailpit"], cancellationToken);
         try
         {
             // Never attach tests to development data. Preserve the real resource graph,

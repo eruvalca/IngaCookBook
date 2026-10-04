@@ -15,6 +15,7 @@ public sealed class BrowserAppFixture : IAsyncLifetime
     private IDistributedApplicationTestingBuilder? _builder;
     private DistributedApplication? _app;
     public Uri Endpoint { get; private set; } = default!;
+    public Uri InboxEndpoint { get; private set; } = default!;
 
     public async ValueTask InitializeAsync()
     {
@@ -26,6 +27,7 @@ public sealed class BrowserAppFixture : IAsyncLifetime
             _app = await _builder.BuildAsync(startup.Token);
             await TestAppHost.StartAsync(_app, message => TestContext.Current.SendDiagnosticMessage(message), startup.Token);
             Endpoint = _app.GetEndpoint("ingacookbook", "https");
+            InboxEndpoint = _app.GetEndpoint("mailpit", "http");
         }
         catch
         {

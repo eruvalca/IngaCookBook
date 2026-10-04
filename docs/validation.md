@@ -5,6 +5,48 @@ addresses the four usability findings and applies the notebook design to editing
 tasting, history, comparison, photos, and the library. The original review of
 `21f20bb` remains in the workflow log as the baseline.
 
+## Local account email — October 4, 2026
+
+The pre-change unit/component baseline passed **262 unit** and **304 component**
+tests, with zero failures or skips. The email integration adds 27 unit cases and a
+real browser confirmation/recovery/change-email workflow. Two component cases for
+the removed development confirmation bypass were retired; the remaining privacy
+test verifies that the confirmation page never generates or exposes a token.
+
+Final email validation includes **289 unit**, **302 component**, **76 PostgreSQL**,
+**16 Chromium**, and **1 Aspire startup** cases passing: **684 total**, zero
+failures/skips, across separate project runs. Browser tests now
+obtain their registration confirmation links from a recipient-filtered Mailpit
+inbox and verify HTML/plain-text links. The new account workflow proves that login
+is blocked before confirmation, recovery changes the password and rejects the old
+one, and a newly confirmed email becomes the sign-in address. The AppHost test
+also checks Mailpit readiness. Fixtures disposed their resources; `aspire ps`
+reported no remaining run.
+
+```powershell
+dotnet build IngaCookBook.slnx
+dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.AspireIntegrationTests/IngaCookBook.AspireIntegrationTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.IntegrationTests/IngaCookBook.IntegrationTests.csproj
+dotnet format IngaCookBook.slnx --severity warn
+dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
+```
+
+Provider/configuration tests cover Development-only Mailpit, explicit Azure
+selection, invalid options without secret disclosure, safe link/code encoding,
+request/shutdown/timeout cancellation, and Azure SDK payload/completion/error
+handling. A malformed Azure connection string initially exposed an uncaught SDK
+validation exception; validation now returns the intended safe options error.
+The new browser scenario initially found both shell navigation copies during
+startup; waiting for the destination heading fixed its synchronization.
+
+The local inbox uses real SMTP. Azure SDK calls are substituted in unit tests:
+Azure resource creation, credentials, sending limits, DNS authentication and
+actual external inbox delivery were **not** verified or invoked. The optional
+live check and configuration are documented in [account email setup](../README.md#account-email).
+
 ## Suite reliability and coverage — October 4, 2026
 
 The unchanged full suite reproduced **10 browser startup failures**: **582 of

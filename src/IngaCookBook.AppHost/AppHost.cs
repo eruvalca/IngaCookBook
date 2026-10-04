@@ -16,6 +16,29 @@ var web = builder.AddProject<Projects.IngaCookBook>("ingacookbook")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health");
 
+// Local capture is the default only in run mode. Azure delivery requires an explicit opt-in.
+var emailProvider = builder.Configuration["Email:Provider"] ?? (builder.ExecutionContext.IsRunMode ? "Mailpit" : "Azure");
+if (string.Equals(emailProvider, "Mailpit", StringComparison.Ordinal) && builder.ExecutionContext.IsRunMode)
+{
+    var mailpit = builder.AddMailPit("mailpit");
+    web.WithReference(mailpit).WaitFor(mailpit)
+        .WithEnvironment("Email__Provider", "Mailpit")
+        .WithEnvironment("Email__SenderAddress", "notebook@example.test")
+        .WithEnvironment("Email__MailpitEndpoint", mailpit.GetEndpoint("smtp"));
+}
+else if (string.Equals(emailProvider, "Azure", StringComparison.Ordinal))
+{
+    var email = builder.AddConnectionString("communicationemail");
+    var sender = builder.AddParameter("email-sender");
+    web.WithReference(email)
+        .WithEnvironment("Email__Provider", "Azure")
+        .WithEnvironment("Email__SenderAddress", sender);
+}
+else
+{
+    throw new InvalidOperationException("Email:Provider must be Azure, or Mailpit for local run mode.");
+}
+
 // Pin the managed EF tool to the application's EF Core version rather than the global tool.
 #pragma warning disable ASPIREDOTNETTOOL // The agreed Aspire EF migration integration uses the experimental tool resource API.
 var migrations = web.AddEFMigrations("ingacookbook-migrations", "IngaCookBook.Data.ApplicationDbContext",

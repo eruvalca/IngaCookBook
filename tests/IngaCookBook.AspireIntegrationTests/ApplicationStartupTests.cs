@@ -25,6 +25,7 @@ public sealed class ApplicationStartupTests(ITestOutputHelper output)
         await using var app = await builder.BuildAsync(timeout.Token);
         await TestAppHost.StartAsync(app, output.WriteLine, timeout.Token);
         await app.ResourceNotifications.WaitForResourceHealthyAsync("photostorage", timeout.Token);
+        await app.ResourceNotifications.WaitForResourceHealthyAsync("mailpit", timeout.Token);
         await app.ResourceNotifications.WaitForResourceAsync("ingacookbook-migrations", KnownResourceStates.Finished, timeout.Token);
 
         using var client = app.CreateHttpClient("ingacookbook", "https");

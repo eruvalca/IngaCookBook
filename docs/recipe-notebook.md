@@ -258,5 +258,7 @@ No offline mode, sharing, imports, inventory, nutrition, quantity scaling, or
 ice cream formulation calculator is included. Saving is explicit. No automatic
 conclusion is made about which change caused an improvement. Account email
 delivery and cloud infrastructure need configuration before public deployment;
-the checked-in setup uses the existing development confirmation flow and Azurite.
+the checked-in setup captures confirmation/recovery emails in a local Mailpit inbox
+and uses Azurite. Azure Communication Services Email is an explicit configuration
+option; see [account email setup](../README.md#account-email).
 No deployment or Azure subscription resources are created by these changes.

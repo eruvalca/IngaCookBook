@@ -2,10 +2,8 @@ using System.Diagnostics.CodeAnalysis;
 using Bunit;
 using IngaCookBook.Data;
 using IngaCookBook.Features.Account.Pages;
-using IngaCookBook.Features.Account.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Shouldly;
@@ -64,26 +62,4 @@ public sealed class RegisterConfirmationTests
         await account.Emails.DidNotReceiveWithAnyArgs().SendConfirmationLinkAsync(default!, default!, default!);
     }
 
-    [Theory]
-    [InlineData("", "")]
-    [InlineData("&returnUrl=%2Fevents%3Fpage%3D2", "&returnUrl=%2Fevents%3Fpage%3D2")]
-    public async Task DevelopmentEmailSenderRendersEncodedConfirmationLinkForExactUserAsync(string returnQuery, string expectedReturnQuery)
-    {
-        await using var context = new BunitContext();
-        var account = context.ConfigureAccount();
-        context.Services.AddSingleton<IEmailSender<ApplicationUser>>(new IdentityNoOpEmailSender());
-        var user = new ApplicationUser();
-        account.Users.FindByEmailAsync("member@example.test").Returns(user);
-        account.Users.GetUserIdAsync(user).Returns("member/id");
-        account.Users.GenerateEmailConfirmationTokenAsync(user).Returns("token+/=");
-        context.Services.GetRequiredService<NavigationManager>()
-            .NavigateTo("Account/RegisterConfirmation?email=member%40example.test" + returnQuery);
-
-        var component = account.Render<RegisterConfirmation>(context);
-
-        component.Find("a[href^='http://localhost/Account/ConfirmEmail']").GetAttribute("href")
-            .ShouldBe("http://localhost/Account/ConfirmEmail?userId=member%2Fid&code=dG9rZW4rLz0" + expectedReturnQuery);
-        component.FindAll("p[role='alert']").ShouldBeEmpty();
-        await account.Users.Received(1).GenerateEmailConfirmationTokenAsync(user);
-    }
 }

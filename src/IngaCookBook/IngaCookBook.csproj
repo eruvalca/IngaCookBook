@@ -22,6 +22,8 @@
     <ProjectReference Include="..\IngaCookBook.ServiceDefaults\IngaCookBook.ServiceDefaults.csproj" />
     <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Aspire.Azure.Storage.Blobs" />
+    <PackageReference Include="Azure.Communication.Email" />
+    <PackageReference Include="MailKit" />
     <PackageReference Include="OneOf" />
     <PackageReference Include="OneOf.SourceGenerator" PrivateAssets="all" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" />

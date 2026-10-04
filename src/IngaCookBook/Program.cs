@@ -2,6 +2,7 @@ using IngaCookBook.Components;
 using IngaCookBook.Data;
 using IngaCookBook.Features.Account.Endpoints;
 using IngaCookBook.Features.Account.Services;
+using IngaCookBook.Features.Account.Services.Email;
 using IngaCookBook.Features.Installation;
 using IngaCookBook.Features.Notebook.Endpoints;
 using IngaCookBook.Features.Notebook.Services;
@@ -80,7 +81,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+AccountEmailConfiguration.Configure(builder);
 
 var app = builder.Build();
 

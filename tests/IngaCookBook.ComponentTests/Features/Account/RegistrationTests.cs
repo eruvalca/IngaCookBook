@@ -152,11 +152,10 @@ public sealed class RegistrationTests
     }
 
     [Fact]
-    public async Task FailedExternalLinkWithDevelopmentEmailSenderOffersExistingConfirmationPageAsync()
+    public async Task FailedExternalLinkOffersEmailRecoveryAsync()
     {
         await using var context = new BunitContext();
         var account = context.ConfigureAccount();
-        context.Services.AddSingleton<IEmailSender<ApplicationUser>>(new IdentityNoOpEmailSender());
         account.Users.SupportsUserEmail.Returns(true);
         var login = new ExternalLoginInfo(new ClaimsPrincipal(new ClaimsIdentity()), "Provider", "key", "Provider");
         account.SignIn.GetExternalLoginInfoAsync().Returns(login);
@@ -167,9 +166,8 @@ public sealed class RegistrationTests
 
         await component.Find("form").SubmitAsync();
 
-        await component.WaitForAssertionAsync(() => component.Find("a[href^='Account/RegisterConfirmation']").GetAttribute("href")
-            .ShouldBe("Account/RegisterConfirmation?email=member%40example.test"));
-        component.Markup.ShouldContain("Password reset requires an email sender.");
+        await component.WaitForAssertionAsync(() => component.Find("a[href='Account/ResendEmailConfirmation']").TextContent.ShouldBe("Request a confirmation email"));
+        component.Find("a[href='Account/ForgotPassword']").TextContent.ShouldBe("Reset your password");
         await account.SignIn.DidNotReceiveWithAnyArgs().SignInAsync(default!, default(bool), default);
     }
 }

@@ -26,7 +26,7 @@ run `dotnet build IngaCookBook.slnx`, then `aspire run`. The first build/start m
 restore NuGet packages, download Aspire/EF tooling, and pull container images.
 Migrations create the Identity and recipe notebook schemas; no accounts, recipes,
 or local credentials are included. Register and confirm an account using the
-development confirmation link, sign in, then create a workspace at `/workspace`.
+confirmation link in the local Mailpit inbox, sign in, then create a workspace at `/workspace`.
 Git initialization is optional and separate.
 
 If this solution was generated, `.template-provenance.json` records its template
@@ -43,7 +43,7 @@ and volume together if preserving development data.
 ## Run through Aspire
 
 Aspire is the default entry point for running and debugging the application. It
-starts PostgreSQL and Azurite, applies migrations, supplies configuration, and starts the web
+starts PostgreSQL, Azurite, and the local Mailpit inbox, applies migrations, supplies configuration, and starts the web
 project. The hosted WebAssembly client runs through that web project.
 
 For interactive development, run from the repository root:
@@ -304,6 +304,8 @@ postgres (PostgreSQL 18.3, managed data volume)
   └─ pgadmin (explicit start)
 photostorage (Azurite in local run mode, managed data volume)
   └─ recipephotos (private blobs consumed by ingacookbook)
+mailpit (local default, disposable SMTP capture + inbox UI)
+  └─ ingacookbook (waits for inbox readiness)
 ```
 
 After a normal startup, these dashboard states are expected:
@@ -312,6 +314,7 @@ After a normal startup, these dashboard states are expected:
 | --- | --- | --- |
 | `postgres`, `ingacookbookdb` | Running / Healthy | PostgreSQL and the application database are ready. |
 | `photostorage`, `recipephotos` | Running / Healthy | Azure Blob-compatible photo storage is available locally. |
+| `mailpit` | Running / Healthy | Local account-email capture is ready. Absent when Azure email is explicitly selected. |
 | `ingacookbook-migrations` | Finished | The one-shot migration command completed successfully. It is not a long-running service. |
 | `ingacookbook` | Running / Healthy | The web application is ready and its database readiness check passes. |
 | `pgadmin` | Not started | Optional database UI; start it when needed. |
@@ -375,15 +378,80 @@ unexpected failures that prevent recording a cleanup job can still require
 operational cleanup.
 
 Identity schema version 3 is retained, including the `AspNetUserPasskeys` table.
-Development registration uses the existing no-op email sender: follow the confirmation
-link on the registration confirmation page before logging in. This setup does not
-configure a production email service or deployment infrastructure.
+Registration requires email confirmation through the inbox described below. There
+is no on-page confirmation bypass. External-login provider credentials, production
+secrets, HTTPS/domain configuration, deployment, and the desired exposure of health
+endpoints still require application-specific work.
 
-Before production, replace `IdentityNoOpEmailSender` and remove or deliberately
-gate the scaffold confirmation link. The current shortcut checks the sender type,
-not the hosting environment; it is not restricted to Development. External-login
-provider credentials, production secrets, HTTPS/domain configuration, deployment,
-and the desired exposure of health endpoints also require application-specific work.
+## Account email
+
+### Local inbox (default)
+
+Start the application through Aspire as usual. The run-mode AppHost adds **mailpit**
+using `CommunityToolkit.Aspire.Hosting.MailPit` and waits for it before starting the
+web application. Open its **http** endpoint in the Aspire dashboard; ports are
+allocated dynamically. Register with any test address, open the captured confirmation
+email, and follow its link before signing in. Password resets, email changes, and
+resend-confirmation requests use the same inbox. Messages have HTML and plain-text
+parts and the sender is `notebook@example.test`.
+
+No Azure subscription or email credentials are needed for this mode. Mailpit captures
+SMTP locally and has no forwarding/relay configured. It is a development inbox, not an
+ACS emulator: it verifies our email content and account flows, not Azure delivery.
+The inbox has no persistent volume and is discarded with its container. It contains
+account recovery links; keep it private on the development machine. Links point to
+the local app origin and only work where that origin is reachable and trusted.
+
+The server accepts `Email:Provider=Mailpit` only in Development. Unknown providers,
+invalid sender addresses, missing endpoints/credentials, or invalid timeouts fail
+startup. The web application defaults to Azure unless Aspire explicitly configures
+Mailpit; the publishing graph never adds a local inbox. EF design-time model creation
+does not start the host or send email.
+
+### Optional real Azure delivery during development
+
+1. Create an **Email Communication Services** resource and provision an Azure-managed
+   domain for an initial test, or verify a custom domain (including SPF and DKIM).
+2. Create an **Azure Communication Services** resource and **connect the email domain**
+   to it. These are two distinct resources. Copy the connected domain's exact MailFrom
+   sender address and the Communication Services resource's connection string.
+3. Store configuration in **AppHost user secrets**, outside the repository:
+
+   ```powershell
+   dotnet user-secrets set 'ConnectionStrings:communicationemail' '<ACS connection string>' --project src/IngaCookBook.AppHost
+   dotnet user-secrets set 'Parameters:email-sender' '<verified MailFrom address>' --project src/IngaCookBook.AppHost
+   dotnet user-secrets set 'Email:Provider' 'Azure' --project src/IngaCookBook.AppHost
+   ```
+
+   Prefer your IDE's user-secret editor for the real connection string so it does not
+   enter shell history. User secrets are local development storage, not an encrypted
+   production secret store. Never commit credentials or export dashboard secrets.
+4. Restart Aspire. Azure mode omits Mailpit and sends through
+   `Azure.Communication.Email` **1.1.0**. Register one disposable account with an inbox
+   you control, confirm it, then test Forgot password and email change. Check the
+   inbox/junk folder as well as Azure delivery status. Real sends use Azure resources
+   and are billed; they are deliberately excluded from automated tests.
+5. To return to local capture, set `Email:Provider` to `Mailpit` in AppHost user secrets
+   and restart. Leaving Azure credentials configured does not enable Azure sending.
+
+Both providers share the same Identity message composer. Delivery observes the SSR
+request cancellation token, host shutdown, and a 30-second bound (`Email:TimeoutSeconds`
+on the **web** app; allowed range 1–120). SDK/SMTP failures propagate rather than
+displaying a false success. An interrupted send may already have been accepted;
+retrying can produce another message. If registration created the account but
+delivery failed, use **Resend email confirmation** instead of registering again.
+There is no background delivery queue or application-level automatic resend.
+
+The ACS adapter waits for the send operation to succeed. This means Azure accepted
+the message for delivery, not that it arrived in an inbox. This implementation uses
+a connection string for the local Azure option. Before cloud rollout, provision
+resources/secrets and consider managed identity/Entra authentication instead of an
+access key; deployment automation and delivery-event monitoring are separate work.
+
+References: [Aspire Mailpit integration](https://aspire.dev/integrations/devtools/mailpit/mailpit-host/),
+[Azure resource prerequisites](https://learn.microsoft.com/azure/communication-services/concepts/email/prepare-email-communication-resource),
+[connect an email domain](https://learn.microsoft.com/azure/communication-services/quickstarts/email/connect-email-communication-resource),
+and [Azure Email .NET SDK](https://learn.microsoft.com/dotnet/api/overview/azure/communication.email-readme).
 
 ## EF migrations
 

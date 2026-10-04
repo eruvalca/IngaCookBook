@@ -15,6 +15,31 @@ the CLI and editor find `global.json` and `IngaCookBook.slnx`.
 `IngaCookBook.Testing` is a shared support library, not a test project. It configures
 isolated AppHost builders for the Aspire and Playwright projects.
 
+### Account email checks
+
+The test AppHost always supplies `--Email:Provider=Mailpit` before constructing its
+resource graph, overriding a developer's Azure opt-in. Tests never send real Azure
+email. Mailpit, PostgreSQL, and Azurite are disposable with dynamically allocated
+ports; no test uses the development inbox or clears another test's messages.
+Each browser test registers a unique recipient and follows its confirmation link
+from Mailpit rather than relying on an on-page bypass. `AccountInbox` checks both
+message formats and the local callback origin. `AccountEmailWorkflowTests` exercises
+confirmation-required login, password recovery (including rejection of the old
+password), and changing to a newly verified email address.
+
+Unit tests cover the shared message content/encoding, reset codes, provider selection,
+startup validation, request/shutdown/timeout cancellation, and the Azure SDK adapter's
+payload, completion, failure, and cancellation handling. Azure SDK dependencies are
+substituted; this does not establish real Azure authentication or inbox delivery.
+Component tests verify confirmation tokens are never exposed in the confirmation
+page and external-login recovery uses the real email flows. For a deliberate live
+Azure smoke check, use [the local setup instructions](../README.md#account-email).
+
+```powershell
+dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj --filter-class '*Email*'
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --filter-class '*AccountEmailWorkflowTests'
+```
+
 ## Supported stack
 
 Existing stack selected September 26, 2026; infrastructure/browser additions
@@ -200,9 +225,9 @@ on the real AppHost model. Aspire's testing builder disables the dashboard and
 randomizes proxied ports by default. The Aspire startup test owns its builder and
 application. Browser tests share one disposable AppHost through xUnit's assembly
 fixture `BrowserAppFixture`; each test still owns its browser contexts and uses
-unique registered accounts/workspaces. The fixture exposes only the endpoint and
+unique registered accounts/workspaces. The fixture exposes web and inbox endpoints and
 does not share pages, cookies, or test input. Sharing the infrastructure prevents
-concurrent browser cases from each starting PostgreSQL, Azurite, migrations and
+concurrent browser cases from each starting PostgreSQL, Azurite, Mailpit, migrations and
 the web server. Keep browser methods and theory rows concurrent; this is not a
 collection-level serialization workaround. Builders/apps are disposed on failure
 and at the end of their owning test/fixture; optional pgAdmin remains unstarted.

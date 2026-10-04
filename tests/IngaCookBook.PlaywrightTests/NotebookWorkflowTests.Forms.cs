@@ -5,7 +5,7 @@ namespace IngaCookBook.PlaywrightTests;
 
 public sealed partial class NotebookWorkflowTests
 {
-    private static async Task RegisterAndCreateWorkspaceAsync(IPage page)
+    private async Task RegisterAndCreateWorkspaceAsync(IPage page)
     {
         var email = $"cook-{Guid.NewGuid():N}@example.test";
         const string Password = "Kitchen-Test-123!";
@@ -14,7 +14,8 @@ public sealed partial class NotebookWorkflowTests
         await FillFieldAsync(page, "Password", Password);
         await FillFieldAsync(page, "Confirm Password", Password);
         await page.GetByRole(AriaRole.Button, new() { Name = "Register", Exact = true }).ClickAsync();
-        await page.GetByRole(AriaRole.Link, new() { Name = "Click here to confirm your account" }).ClickAsync();
+        await page.GetByText("Please check your email to confirm your account.", new() { Exact = true }).WaitForAsync();
+        await page.GotoAsync(await AccountInbox.ReadLinkAsync(application, email, "/Account/ConfirmEmail", Xunit.TestContext.Current.CancellationToken));
         await page.GetByText("Thank you for confirming your email.").WaitForAsync();
         await page.GotoAsync("/Account/Login");
         await FillFieldAsync(page, "Email", email);
