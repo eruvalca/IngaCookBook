@@ -146,6 +146,12 @@ selections remain visible too.
   access before serving them.
   Storage outages show an error while preserving earlier successful uploads.
   Unconfirmed uploads and failed compensating deletes are queued for cleanup.
+  Cancellation while uploading also queues the unique unconfirmed blob for cleanup.
+  Once storage confirms success, the server finishes the metadata write (or removes
+  an unreferenced upload after a conflict) even if the caller leaves. Database command
+  timeouts still apply; compensation gets its own bounded token. A canceled request
+  or missing response does not mean the photo was not saved: check the version before
+  uploading it again.
   Upload progress identifies the current file and saved count. Recipe settings
   provide photo previews, editable captions, and a library cover choice from that
   recipe's photos. Automatic cover selection prefers a photo from the standard,
@@ -166,6 +172,21 @@ icons, and theme tokens. Appearance follows the system or an explicit light/dark
 preference saved in the browser. The visual theme takes its coral pink and
 leaf green from Inga's Frozen Desserts logo, with ivory surfaces in light mode
 and warm dark surfaces at night. Long forms scroll with the document.
+
+Notebook components own a cancellation lifetime. Page reads use a 30-second
+operation deadline; saves/uploads use two minutes. Starting a newer operation
+cancels the previous one, and disposing a component cancels its pending work.
+Results are checked before publication so an old route cannot overwrite the new
+editor. Normal navigation cancellation is quiet. Timeouts and lost save responses
+retain inputs and ask the cook to check saved state before retrying.
+
+Static SSR/prerender operations additionally observe the current HTTP request's
+abort token through a server-provided cascade. Interactive Server and WebAssembly
+operations use their own component lifetime instead. The WebAssembly adapter
+forwards cancellation to HTTP; minimal APIs bind a separate request-abort token
+and forward it to services, EF and storage. Direct Server calls forward the
+component token. Cancellation is cooperative, not a transaction rollback or a
+guarantee that a disconnected circuit is immediately disposed.
 
 Recipe creation, settings, the editor, and the journal reuse collocated JavaScript
 to protect enhanced links and history traversal;

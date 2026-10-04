@@ -73,6 +73,18 @@ HTTP context and Identity dependencies. `ComponentFormExtensions` supplies
 these receiver-focused helpers in the account test namespace and use a fresh,
 asynchronously disposed `BunitContext` for every test.
 
+Cancellation regressions use controlled pending tasks instead of sleeps. The client
+grants the unit project internal access for `HttpNotebookCancellationTests`, covering
+required service tokens, all HTTP operation paths, antiforgery, response streams and
+multipart uploads. `NotebookCancellationTests` and the cancellation partial of
+`NotebookFormSaveTests` cover deadlines, disposal/guard cleanup, stale loads, retained
+inputs and the static-versus-interactive request lifetime. These bUnit renderer names
+test branching logic; the browser suite remains responsible for real render modes.
+`NotebookRequestCancellationTests` owns a loopback Kestrel listener on a dynamic port
+and a disposable PostgreSQL database, verifying that a real HTTP abort reaches the
+notebook endpoint, service and EF query. `PhotoStorageFailureTests` covers cancellation
+before writes, ambiguous uploads and finalization/compensation after blob success.
+
 ## Build and run
 
 Run these commands from the repository root:

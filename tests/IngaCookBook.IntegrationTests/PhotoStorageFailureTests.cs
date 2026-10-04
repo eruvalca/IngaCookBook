@@ -11,7 +11,7 @@ using Xunit;
 namespace IngaCookBook.IntegrationTests;
 
 [SuppressMessage("Maintainability", "CA1515:Consider making public types internal", Justification = "xUnit requires public test classes for discovery.")]
-public sealed class PhotoStorageFailureTests
+public sealed partial class PhotoStorageFailureTests
 {
     [Theory]
     [InlineData(false)]
@@ -100,7 +100,7 @@ public sealed class PhotoStorageFailureTests
         }
         store.Photos.Items.ShouldBeEmpty();
         await using var db = await store.Factory.CreateDbContextAsync(ct);
-        (await db.Set<PhotoCleanupEntity>().CountAsync(ct)).ShouldBe(0);
+        (await db.Set<PhotoCleanupEntity>().CountAsync(ct)).ShouldBe(canceled ? 1 : 0);
         (await service.GetRecipeAsync(recipe.Id, ct))!.Revision.ShouldBe(recipe.Revision);
     }
 

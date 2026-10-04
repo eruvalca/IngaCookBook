@@ -7,13 +7,13 @@ namespace IngaCookBook.Client.Services;
 
 internal sealed class HttpNotebookService(HttpClient http) : INotebookService
 {
-    public Task<WorkspaceView?> GetWorkspaceAsync(CancellationToken cancellationToken = default) =>
+    public Task<WorkspaceView?> GetWorkspaceAsync(CancellationToken cancellationToken) =>
         http.GetFromJsonAsync<WorkspaceView>("api/notebook/workspace", cancellationToken);
 
-    public async Task<IReadOnlyList<RecipeDocument>> GetRecipesAsync(CancellationToken cancellationToken = default) =>
+    public async Task<IReadOnlyList<RecipeDocument>> GetRecipesAsync(CancellationToken cancellationToken) =>
         await http.GetFromJsonAsync<RecipeDocument[]>("api/notebook/recipes", cancellationToken) ?? [];
 
-    public async Task<RecipeDocument?> GetRecipeAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<RecipeDocument?> GetRecipeAsync(Guid id, CancellationToken cancellationToken)
     {
         using var response = await http.GetAsync(new Uri($"api/notebook/recipes/{id}", UriKind.Relative), cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound)
@@ -24,43 +24,43 @@ internal sealed class HttpNotebookService(HttpClient http) : INotebookService
         return await response.Content.ReadFromJsonAsync<RecipeDocument>(cancellationToken);
     }
 
-    public Task<NotebookChange> CreateWorkspaceAsync(WorkspaceRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> CreateWorkspaceAsync(WorkspaceRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Post, "api/notebook/workspace", request, cancellationToken);
 
-    public Task<NotebookChange> CreateRecipeAsync(NewRecipeRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> CreateRecipeAsync(NewRecipeRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Post, "api/notebook/recipes", request, cancellationToken);
 
-    public Task<NotebookChange> SaveVersionAsync(Guid recipeId, Guid versionId, VersionRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> SaveVersionAsync(Guid recipeId, Guid versionId, VersionRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Put, $"{VersionPath(recipeId, versionId)}/", request, cancellationToken);
 
-    public Task<NotebookChange> VaryAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> VaryAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Post, $"{VersionPath(recipeId, versionId)}/variations", request, cancellationToken);
 
-    public Task<NotebookChange> DeleteDraftAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> DeleteDraftAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Delete, $"{VersionPath(recipeId, versionId)}/", request, cancellationToken);
 
-    public Task<NotebookChange> MakeBatchAsync(Guid recipeId, Guid versionId, BatchRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> MakeBatchAsync(Guid recipeId, Guid versionId, BatchRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Post, $"{VersionPath(recipeId, versionId)}/batches", request, cancellationToken);
 
-    public Task<NotebookChange> CorrectBatchAsync(Guid recipeId, Guid versionId, Guid batchId, BatchCorrectionRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> CorrectBatchAsync(Guid recipeId, Guid versionId, Guid batchId, BatchCorrectionRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Put, $"{VersionPath(recipeId, versionId)}/batches/{batchId}", request, cancellationToken);
 
-    public Task<NotebookChange> EvaluateAsync(Guid recipeId, Guid versionId, Guid batchId, EvaluationRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> EvaluateAsync(Guid recipeId, Guid versionId, Guid batchId, EvaluationRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Post, $"{VersionPath(recipeId, versionId)}/batches/{batchId}/evaluations", request, cancellationToken);
 
-    public Task<NotebookChange> SetStandardAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> SetStandardAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Post, $"{VersionPath(recipeId, versionId)}/standard", request, cancellationToken);
 
-    public Task<NotebookChange> CorrectEvaluationAsync(Guid recipeId, Guid versionId, Guid batchId, Guid evaluationId, EvaluationCorrectionRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> CorrectEvaluationAsync(Guid recipeId, Guid versionId, Guid batchId, Guid evaluationId, EvaluationCorrectionRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Put, $"{VersionPath(recipeId, versionId)}/batches/{batchId}/evaluations/{evaluationId}", request, cancellationToken);
 
-    public Task<NotebookChange> SaveSettingsAsync(Guid recipeId, RecipeSettingsRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> SaveSettingsAsync(Guid recipeId, RecipeSettingsRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Put, $"api/notebook/recipes/{recipeId}/settings", request, cancellationToken);
 
-    public Task<NotebookChange> PromoteAsync(Guid recipeId, Guid versionId, PromotionRequest request, CancellationToken cancellationToken = default) =>
+    public Task<NotebookChange> PromoteAsync(Guid recipeId, Guid versionId, PromotionRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Post, $"{VersionPath(recipeId, versionId)}/promote", request, cancellationToken);
 
-    public async Task<NotebookChange> UploadPhotoAsync(Guid recipeId, Guid versionId, Stream content, string fileName, string contentType, CancellationToken cancellationToken = default)
+    public async Task<NotebookChange> UploadPhotoAsync(Guid recipeId, Guid versionId, Stream content, string fileName, string contentType, CancellationToken cancellationToken)
     {
         using var form = new MultipartFormDataContent();
         using var file = new StreamContent(content);

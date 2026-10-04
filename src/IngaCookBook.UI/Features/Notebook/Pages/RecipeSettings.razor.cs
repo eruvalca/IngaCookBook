@@ -19,9 +19,10 @@ public sealed partial class RecipeSettings
     private string[] RemovedNames => GetRemovedNames();
     protected override string FormState => JsonSerializer.Serialize(new { _name, _description, _metrics, _confirmRemoval, _coverId, _photos });
 
-    protected override Task OnParametersSetAsync() => RunAsync(async () =>
+    protected override Task OnParametersSetAsync() => LoadAsync(async ct =>
     {
-        _recipe = await Notebook.GetRecipeAsync(RecipeId);
+        _recipe = null;
+        _recipe = await ReceiveAsync(Notebook.GetRecipeAsync(RecipeId, ct), ct);
         if (_recipe is not null)
         {
             _coverId = _recipe.CoverPhotoId?.ToString() ?? "";
@@ -39,17 +40,17 @@ public sealed partial class RecipeSettings
 
     private void AddMetric() => _metrics.Add(new());
 
-    private Task SaveAsync() => RunAsync(async () =>
+    private Task SaveAsync() => RunAsync(async ct =>
     {
         if (_recipe is null || (RemovedNames.Length > 0 && !_confirmRemoval)) { return; }
-        var result = await Notebook.SaveSettingsAsync(RecipeId,
-            new(_recipe.Revision, _name, _description, _metrics.Select(m => new EvaluationMetric(m.Id, m.Name)).ToArray(), Guid.TryParse(_coverId, out var cover) ? cover : null, _photos.ToDictionary(p => p.Id, p => p.Caption)));
+        var result = await ReceiveAsync(Notebook.SaveSettingsAsync(RecipeId,
+            new(_recipe.Revision, _name, _description, _metrics.Select(m => new EvaluationMetric(m.Id, m.Name)).ToArray(), Guid.TryParse(_coverId, out var cover) ? cover : null, _photos.ToDictionary(p => p.Id, p => p.Caption)), ct), ct);
         if (Saved(result))
         {
-            _recipe = await Notebook.GetRecipeAsync(RecipeId);
+            _recipe = await ReceiveAsync(Notebook.GetRecipeAsync(RecipeId, ct), ct);
             _metrics = _recipe!.Metrics.Select(m => new MetricInput { Id = m.Id, Name = m.Name }).ToList();
             _confirmRemoval = false;
-            await AcceptChangesAsync();
+            await AcceptChangesAsync(ct);
         }
     });
 

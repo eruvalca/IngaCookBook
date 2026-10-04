@@ -4,9 +4,9 @@ namespace IngaCookBook.UI.Features.Notebook.Pages;
 
 public sealed partial class VersionEditor
 {
-    private Task DeleteDraftAsync() => RunAsync(async () =>
+    private Task DeleteDraftAsync() => RunAsync(async ct =>
     {
-        if (_recipe is null || !Saved(await Notebook.DeleteDraftAsync(RecipeId, VersionId, new(_recipe.Revision))))
+        if (_recipe is null || !Saved(await ReceiveAsync(Notebook.DeleteDraftAsync(RecipeId, VersionId, new(_recipe.Revision), ct), ct)))
         {
             return;
         }
@@ -17,7 +17,7 @@ public sealed partial class VersionEditor
         _savedRevision++;
         if (_navigationInterop is not null)
         {
-            await _navigationInterop.UpdateAsync(_editor, false, _savedRevision);
+            await _navigationInterop.UpdateAsync(_editor, false, _savedRevision, ct);
         }
         Navigation.NavigateTo(_recipe.Versions.Count == 1 ? "/recipes" : $"/recipes/{RecipeId}");
     });

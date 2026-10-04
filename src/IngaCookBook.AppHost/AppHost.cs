@@ -36,4 +36,5 @@ if (builder.ExecutionContext.IsRunMode)
     postgres.WithPgAdmin(pgAdmin => pgAdmin.WithExplicitStart());
 }
 
-await builder.Build().RunAsync();
+// The host owns process shutdown (Ctrl+C/signals); there is no caller request lifetime.
+await builder.Build().RunAsync(CancellationToken.None);

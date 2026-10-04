@@ -23,9 +23,9 @@ public sealed partial class CompareVersions
     private bool HasObservation(EvaluationMetric metric) => new[] { _leftEvaluation, _rightEvaluation }
         .Any(e => e?.Scores.Any(s => s.MetricId == metric.Id && (s.Score is not null || !string.IsNullOrWhiteSpace(s.Notes))) == true);
 
-    protected override Task OnParametersSetAsync() => RunAsync(async () =>
+    protected override Task OnParametersSetAsync() => LoadAsync(async ct =>
     {
-        _recipe = await Notebook.GetRecipeAsync(RecipeId);
+        _recipe = await ReceiveAsync(Notebook.GetRecipeAsync(RecipeId, ct), ct);
         if (_recipe is null || _recipe.Versions.Count == 0) { return; }
         _right = _recipe.Versions.FirstOrDefault(v => v.Id == Right) ?? _recipe.Versions[^1];
         _left = _recipe.Versions.FirstOrDefault(v => v.Id == Left)

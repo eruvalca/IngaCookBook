@@ -5,7 +5,7 @@ namespace IngaCookBook.Features.Notebook.Services;
 internal sealed partial class NotebookService
 {
     public async Task<NotebookChange> CorrectEvaluationAsync(Guid recipeId, Guid versionId, Guid batchId, Guid evaluationId,
-        EvaluationCorrectionRequest request, CancellationToken cancellationToken = default)
+        EvaluationCorrectionRequest request, CancellationToken cancellationToken)
     {
         var recipe = await GetRecipeAsync(recipeId, cancellationToken);
         var batch = recipe?.Versions.FirstOrDefault(v => v.Id == versionId)?.Batches.FirstOrDefault(b => b.Id == batchId);

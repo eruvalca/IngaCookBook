@@ -12,11 +12,11 @@ public sealed partial class VersionDetails
     private string _currency = "USD";
     private IngredientCost _cost = new(0, 0);
 
-    protected override Task OnParametersSetAsync() => RunAsync(async () =>
+    protected override Task OnParametersSetAsync() => LoadAsync(async ct =>
     {
-        _recipe = await Notebook.GetRecipeAsync(RecipeId);
+        _recipe = await ReceiveAsync(Notebook.GetRecipeAsync(RecipeId, ct), ct);
         _version = _recipe?.Versions.FirstOrDefault(v => v.Id == VersionId);
-        _currency = (await Notebook.GetWorkspaceAsync())?.Currency ?? "USD";
+        _currency = (await ReceiveAsync(Notebook.GetWorkspaceAsync(ct), ct))?.Currency ?? "USD";
         if (_version is not null)
         {
             _cost = RecipeCosting.Calculate(_version.Content);

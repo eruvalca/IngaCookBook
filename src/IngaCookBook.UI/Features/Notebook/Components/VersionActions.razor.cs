@@ -13,34 +13,34 @@ public sealed partial class VersionActions
     [Parameter, EditorRequired] public bool OnlyVersion { get; set; }
     private string _newName = "";
 
-    private Task DeleteDraftAsync() => RunAsync(async () =>
+    private Task DeleteDraftAsync() => RunAsync(async ct =>
     {
-        if (Saved(await Notebook.DeleteDraftAsync(RecipeId, VersionId, new(Revision))))
+        if (Saved(await ReceiveAsync(Notebook.DeleteDraftAsync(RecipeId, VersionId, new(Revision), ct), ct)))
         {
             Navigation.NavigateTo(OnlyVersion ? "/recipes" : $"/recipes/{RecipeId}");
         }
     });
 
-    private Task VaryAsync() => RunAsync(async () =>
+    private Task VaryAsync() => RunAsync(async ct =>
     {
-        var result = await Notebook.VaryAsync(RecipeId, VersionId, new(Revision));
+        var result = await ReceiveAsync(Notebook.VaryAsync(RecipeId, VersionId, new(Revision), ct), ct);
         if (Saved(result) && result is ChangeSaved saved)
         {
             Navigation.NavigateTo($"/recipes/{RecipeId}/versions/{saved.Id}/edit");
         }
     });
 
-    private Task StandardAsync() => RunAsync(async () =>
+    private Task StandardAsync() => RunAsync(async ct =>
     {
-        if (Saved(await Notebook.SetStandardAsync(RecipeId, VersionId, new(Revision))))
+        if (Saved(await ReceiveAsync(Notebook.SetStandardAsync(RecipeId, VersionId, new(Revision), ct), ct)))
         {
             Navigation.Refresh();
         }
     });
 
-    private Task PromoteAsync() => RunAsync(async () =>
+    private Task PromoteAsync() => RunAsync(async ct =>
     {
-        var result = await Notebook.PromoteAsync(RecipeId, VersionId, new(Revision, _newName));
+        var result = await ReceiveAsync(Notebook.PromoteAsync(RecipeId, VersionId, new(Revision, _newName), ct), ct);
         if (Saved(result) && result is ChangeSaved saved)
         {
             Navigation.NavigateTo($"/recipes/{saved.Id}");

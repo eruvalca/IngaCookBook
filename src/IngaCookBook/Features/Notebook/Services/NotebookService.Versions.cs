@@ -4,7 +4,7 @@ namespace IngaCookBook.Features.Notebook.Services;
 
 internal sealed partial class NotebookService
 {
-    public async Task<NotebookChange> SaveVersionAsync(Guid recipeId, Guid versionId, VersionRequest request, CancellationToken cancellationToken = default)
+    public async Task<NotebookChange> SaveVersionAsync(Guid recipeId, Guid versionId, VersionRequest request, CancellationToken cancellationToken)
     {
         var recipe = await GetRecipeAsync(recipeId, cancellationToken);
         var version = recipe?.Versions.FirstOrDefault(v => v.Id == versionId);
@@ -77,7 +77,7 @@ internal sealed partial class NotebookService
     private static int Depth(RecipeContent content) => 1 + content.Ingredients
         .Where(i => i.LinkedContent is not null).Select(i => Depth(i.LinkedContent!)).DefaultIfEmpty(0).Max();
 
-    public async Task<NotebookChange> MakeBatchAsync(Guid recipeId, Guid versionId, BatchRequest request, CancellationToken cancellationToken = default)
+    public async Task<NotebookChange> MakeBatchAsync(Guid recipeId, Guid versionId, BatchRequest request, CancellationToken cancellationToken)
     {
         var recipe = await GetRecipeAsync(recipeId, cancellationToken);
         var version = recipe?.Versions.FirstOrDefault(v => v.Id == versionId);
@@ -102,7 +102,7 @@ internal sealed partial class NotebookService
         }), batch.Id, cancellationToken);
     }
 
-    public async Task<NotebookChange> EvaluateAsync(Guid recipeId, Guid versionId, Guid batchId, EvaluationRequest request, CancellationToken cancellationToken = default)
+    public async Task<NotebookChange> EvaluateAsync(Guid recipeId, Guid versionId, Guid batchId, EvaluationRequest request, CancellationToken cancellationToken)
     {
         var recipe = await GetRecipeAsync(recipeId, cancellationToken);
         var batch = recipe?.Versions.FirstOrDefault(v => v.Id == versionId)?.Batches.FirstOrDefault(b => b.Id == batchId);

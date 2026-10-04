@@ -7,7 +7,7 @@ namespace IngaCookBook.Features.Notebook.Services;
 
 internal sealed partial class NotebookService
 {
-    public async Task<NotebookChange> CreateWorkspaceAsync(WorkspaceRequest request, CancellationToken cancellationToken = default)
+    public async Task<NotebookChange> CreateWorkspaceAsync(WorkspaceRequest request, CancellationToken cancellationToken)
     {
         var userId = await UserIdAsync();
         if (userId is null)
@@ -37,7 +37,7 @@ internal sealed partial class NotebookService
         }
     }
 
-    public Task<NotebookChange> CreateRecipeAsync(NewRecipeRequest request, CancellationToken cancellationToken = default)
+    public Task<NotebookChange> CreateRecipeAsync(NewRecipeRequest request, CancellationToken cancellationToken)
     {
         var metrics = request.Metrics?.Select(name => new EvaluationMetric(Guid.NewGuid(), name)).ToArray();
         var error = NotebookValidation.Settings(request.Name, request.Description, metrics);
@@ -55,7 +55,7 @@ internal sealed partial class NotebookService
         return InsertAsync(recipe, cancellationToken);
     }
 
-    public async Task<NotebookChange> VaryAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken = default)
+    public async Task<NotebookChange> VaryAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken)
     {
         var newId = Guid.NewGuid();
         return await UpdateAsync(recipeId, request.Revision, recipe =>
@@ -80,7 +80,7 @@ internal sealed partial class NotebookService
         }, newId, cancellationToken);
     }
 
-    public async Task<NotebookChange> SetStandardAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken = default)
+    public async Task<NotebookChange> SetStandardAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken)
     {
         var recipe = await GetRecipeAsync(recipeId, cancellationToken);
         var version = recipe?.Versions.FirstOrDefault(v => v.Id == versionId);
@@ -104,7 +104,7 @@ internal sealed partial class NotebookService
         }, versionId, cancellationToken);
     }
 
-    public async Task<NotebookChange> SaveSettingsAsync(Guid recipeId, RecipeSettingsRequest request, CancellationToken cancellationToken = default)
+    public async Task<NotebookChange> SaveSettingsAsync(Guid recipeId, RecipeSettingsRequest request, CancellationToken cancellationToken)
     {
         var error = NotebookValidation.Settings(request.Name, request.Description, request.Metrics);
         if (error is not null)
@@ -150,7 +150,7 @@ internal sealed partial class NotebookService
         }, recipeId, cancellationToken);
     }
 
-    public async Task<NotebookChange> PromoteAsync(Guid recipeId, Guid versionId, PromotionRequest request, CancellationToken cancellationToken = default)
+    public async Task<NotebookChange> PromoteAsync(Guid recipeId, Guid versionId, PromotionRequest request, CancellationToken cancellationToken)
     {
         var original = await GetRecipeAsync(recipeId, cancellationToken);
         var source = original?.Versions.FirstOrDefault(v => v.Id == versionId);

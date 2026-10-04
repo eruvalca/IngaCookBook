@@ -33,10 +33,10 @@ public sealed partial class Library
 
     protected override async Task OnParametersSetAsync()
     {
-        await RunAsync(async () =>
+        await LoadAsync(async ct =>
         {
-            _workspace = await Notebook.GetWorkspaceAsync();
-            _recipes = await Notebook.GetRecipesAsync();
+            _workspace = await ReceiveAsync(Notebook.GetWorkspaceAsync(ct), ct);
+            _recipes = await ReceiveAsync(Notebook.GetRecipesAsync(ct), ct);
             _loaded = true;
         });
     }

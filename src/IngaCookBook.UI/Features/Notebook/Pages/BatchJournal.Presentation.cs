@@ -24,17 +24,17 @@ public sealed partial class BatchJournal
         Error = null;
     }
 
-    private Task TryIdeaAsync(Guid evaluationId) => RunAsync(async () =>
+    private Task TryIdeaAsync(Guid evaluationId) => RunAsync(async ct =>
     {
-        if (_recipe is null || _navigationInterop is not null && !await _navigationInterop.ConfirmDiscardAsync()) { return; }
-        var result = await Notebook.VaryAsync(RecipeId, VersionId, new(_recipe.Revision));
+        if (_recipe is null || _navigationInterop is not null && !await _navigationInterop.ConfirmDiscardAsync(ct)) { return; }
+        var result = await ReceiveAsync(Notebook.VaryAsync(RecipeId, VersionId, new(_recipe.Revision), ct), ct);
         if (Saved(result) && result is ChangeSaved saved)
         {
             // Creating the variation succeeded; navigating now must not prompt twice.
             _savedBatch = BatchState;
             _savedEvaluation = EvaluationState;
             _savedRevision++;
-            if (_navigationInterop is not null) { await _navigationInterop.UpdateAsync(_editor, false, _savedRevision); }
+            if (_navigationInterop is not null) { await _navigationInterop.UpdateAsync(_editor, false, _savedRevision, ct); }
             Navigation.NavigateTo($"/recipes/{RecipeId}/versions/{saved.Id}/edit?idea={evaluationId}");
         }
     });

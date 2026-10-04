@@ -167,6 +167,29 @@ models mutually exclusive inputs;
 [EnableAuthenticatorOutcome](src/IngaCookBook/Features/Account/Models/EnableAuthenticatorOutcome.cs)
 distinguishes complete success from partial completion.
 
+## Cancellation
+
+- Application-owned asynchronous notebook contracts require an explicit final
+  `CancellationToken`; forward it through HTTP, EF, blob storage and stream calls.
+  Keep framework lifecycle/override signatures intact. Use the existing SDK and
+  Meziantou rules documented in `build/README.md`; no custom analyzer is needed.
+- Components doing asynchronous notebook work inherit `NotebookPage` (and
+  `GuardedNotebookPage` for guarded forms). `CancellableComponentBase` owns disposal;
+  override `DisposeCoreAsync` for cleanup and call the base implementation instead
+  of hiding or reimplementing `DisposeAsync`. Display-only components need no base.
+- Use `LoadAsync`/`RunAsync` operation tokens and `ReceiveAsync` before publishing
+  awaited service results. A newer operation cancels the previous one. Do not use
+  component fields or route parameters after an unchecked await to publish stale
+  data or navigate. Publish multi-call editor loads only after all calls succeed.
+- The server's named `RequestAborted` cascade applies only to static rendering.
+  Never use the HTTP request lifetime for an interactive circuit. Do not serialize
+  tokens across render modes or HTTP; minimal APIs receive their own request token.
+- Treat disposal/supersession as expected cancellation, distinguish timeouts, and
+  retain unsaved inputs. Cancellation does not prove that a write rolled back.
+  After an acknowledged blob upload, finish its metadata write or compensation;
+  explain deliberate `CancellationToken.None` boundaries and use independent,
+  bounded tokens for cleanup. Do not turn unexpected exceptions into success.
+
 ## Validation
 
 - Compiler and analyzer warnings fail builds through `TreatWarningsAsErrors`.

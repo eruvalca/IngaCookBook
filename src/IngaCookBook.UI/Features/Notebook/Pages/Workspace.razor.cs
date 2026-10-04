@@ -9,20 +9,20 @@ public sealed partial class Workspace
     private WorkspaceView? _workspace;
     [SupplyParameterFromForm] private WorkspaceInput Input { get; set; } = default!;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => LoadAsync(async ct =>
     {
         Input ??= new();
-        _workspace = await Notebook.GetWorkspaceAsync();
-    }
+        _workspace = await ReceiveAsync(Notebook.GetWorkspaceAsync(ct), ct);
+    });
 
-    private async Task CreateAsync()
+    private Task CreateAsync() => RunAsync(async ct =>
     {
-        if (Saved(await Notebook.CreateWorkspaceAsync(new(Input.Name, Input.Currency))))
+        if (Saved(await ReceiveAsync(Notebook.CreateWorkspaceAsync(new(Input.Name, Input.Currency), ct), ct)))
         {
             Navigation.NavigateTo("/recipes");
             return;
         }
-    }
+    });
 
     private sealed class WorkspaceInput
     {

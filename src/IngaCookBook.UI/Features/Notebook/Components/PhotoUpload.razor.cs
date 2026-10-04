@@ -15,7 +15,7 @@ public sealed partial class PhotoUpload
     private string _uploadingName = "";
 
     [SuppressMessage("Security", "S5693:Limit the content length of HTTP requests", Justification = "Recipe photos have an explicit 10 MiB cap in both the browser stream and authenticated server handler.")]
-    private Task UploadAsync(InputFileChangeEventArgs args) => RunAsync(async () =>
+    private Task UploadAsync(InputFileChangeEventArgs args) => RunAsync(async ct =>
     {
         _uploaded = 0;
         var files = args.GetMultipleFiles(int.MaxValue);
@@ -30,11 +30,11 @@ public sealed partial class PhotoUpload
                 Status = null;
                 return;
             }
-            await using var stream = file.OpenReadStream(10 * 1024 * 1024);
+            await using var stream = file.OpenReadStream(10 * 1024 * 1024, ct);
             NotebookChange result;
             try
             {
-                result = await Notebook.UploadPhotoAsync(RecipeId, VersionId, stream, file.Name, file.ContentType);
+                result = await ReceiveAsync(Notebook.UploadPhotoAsync(RecipeId, VersionId, stream, file.Name, file.ContentType, ct), ct);
             }
             catch (HttpRequestException)
             {

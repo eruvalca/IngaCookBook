@@ -13,7 +13,7 @@ public sealed partial class BatchJournal
 
     private async Task CorrectBatchAsync(RecipeBatch batch)
     {
-        if (BatchDirty && _navigationInterop is not null && !await _navigationInterop.ConfirmDiscardAsync()) { return; }
+        if (BatchDirty && _navigationInterop is not null && !await _navigationInterop.ConfirmDiscardAsync(LifetimeToken)) { return; }
         View = "batch";
         _receipt = null;
         if (_correctingBatchId is null)
@@ -33,7 +33,7 @@ public sealed partial class BatchJournal
 
     private async Task CancelBatchCorrectionAsync()
     {
-        if (BatchDirty && _navigationInterop is not null && !await _navigationInterop.ConfirmDiscardAsync()) { return; }
+        if (BatchDirty && _navigationInterop is not null && !await _navigationInterop.ConfirmDiscardAsync(LifetimeToken)) { return; }
         ResetBatchCorrection();
     }
 

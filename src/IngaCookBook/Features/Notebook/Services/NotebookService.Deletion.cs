@@ -6,7 +6,7 @@ namespace IngaCookBook.Features.Notebook.Services;
 
 internal sealed partial class NotebookService
 {
-    public async Task<NotebookChange> DeleteDraftAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken = default)
+    public async Task<NotebookChange> DeleteDraftAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken)
     {
         var workspace = await GetWorkspaceAsync(cancellationToken);
         if (workspace is null)

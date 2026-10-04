@@ -7,7 +7,7 @@ using Microsoft.JSInterop;
 
 namespace IngaCookBook.UI.Features.Notebook.Pages;
 
-public sealed partial class VersionEditor : IAsyncDisposable
+public sealed partial class VersionEditor
 {
     private readonly QuantityInputCulture _quantityCulture = new();
     [Parameter] public Guid RecipeId { get; set; }
@@ -39,12 +39,19 @@ public sealed partial class VersionEditor : IAsyncDisposable
     private IEnumerable<MetricOption> MetricOptions => new[] { new MetricOption("", "Choose a focus (optional)") }
         .Concat(_recipe?.Metrics.Select(m => new MetricOption(m.Id.ToString(), m.Name)) ?? []);
 
-    protected override Task OnParametersSetAsync() => RunAsync(async () =>
+    protected override Task OnParametersSetAsync() => LoadAsync(async ct =>
     {
-        _recipe = await Notebook.GetRecipeAsync(RecipeId);
-        _version = _recipe?.Versions.FirstOrDefault(v => v.Id == VersionId);
-        _parent = _recipe?.Versions.FirstOrDefault(v => v.Id == _version?.ParentId);
-        _currency = (await Notebook.GetWorkspaceAsync())?.Currency ?? "USD";
+        _recipe = null;
+        _version = null;
+        _parent = null;
+        var recipe = await ReceiveAsync(Notebook.GetRecipeAsync(RecipeId, ct), ct);
+        var currency = (await ReceiveAsync(Notebook.GetWorkspaceAsync(ct), ct))?.Currency ?? "USD";
+        var recipes = await ReceiveAsync(Notebook.GetRecipesAsync(ct), ct);
+        // Publish the editor only after the complete load succeeds.
+        _recipe = recipe;
+        _version = recipe?.Versions.FirstOrDefault(v => v.Id == VersionId);
+        _parent = recipe?.Versions.FirstOrDefault(v => v.Id == _version?.ParentId);
+        _currency = currency;
         if (_version is not null)
         {
             _draft = VersionDraft.From(_version.Content);
@@ -54,7 +61,6 @@ public sealed partial class VersionEditor : IAsyncDisposable
                 _draft.Hypothesis = tasting.NextIdea;
             }
         }
-        var recipes = await Notebook.GetRecipesAsync();
         _links = [new("", "No linked recipe", null), .. recipes.Where(r => r.Id != RecipeId)
             .SelectMany(r => r.Versions.Where(v => v.IsLocked).Select(v =>
                 new LinkOption($"{r.Id}/{v.Id}", $"{r.Name} · V{v.Number}: {v.Content.Label}",
@@ -64,7 +70,7 @@ public sealed partial class VersionEditor : IAsyncDisposable
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         _navigationInterop ??= new EditorNavigationInterop(JavaScript);
-        await _navigationInterop.UpdateAsync(_editor, Dirty, _savedRevision);
+        await _navigationInterop.UpdateAsync(_editor, Dirty, _savedRevision, LifetimeToken);
         if (!GuardReady)
         {
             GuardReady = true;
@@ -72,15 +78,15 @@ public sealed partial class VersionEditor : IAsyncDisposable
         }
     }
 
-    private Task SaveAsync() => RunAsync(async () =>
+    private Task SaveAsync() => RunAsync(async ct =>
     {
         if (_recipe is null)
         {
             return;
         }
-        if (Saved(await Notebook.SaveVersionAsync(RecipeId, VersionId, new(_recipe.Revision, _draft.ToContent(), _correctionReason))))
+        if (Saved(await ReceiveAsync(Notebook.SaveVersionAsync(RecipeId, VersionId, new(_recipe.Revision, _draft.ToContent(), _correctionReason), ct), ct)))
         {
-            _recipe = await Notebook.GetRecipeAsync(RecipeId);
+            _recipe = await ReceiveAsync(Notebook.GetRecipeAsync(RecipeId, ct), ct);
             _version = _recipe!.Versions.First(v => v.Id == VersionId);
             _draft = VersionDraft.From(_version.Content);
             _saved = JsonSerializer.Serialize(_draft);
@@ -88,7 +94,7 @@ public sealed partial class VersionEditor : IAsyncDisposable
             _savedRevision++;
             if (IdeaId is not null)
             {
-                if (_navigationInterop is not null) { await _navigationInterop.UpdateAsync(_editor, false, _savedRevision); }
+                if (_navigationInterop is not null) { await _navigationInterop.UpdateAsync(_editor, false, _savedRevision, ct); }
                 Navigation.NavigateTo($"/recipes/{RecipeId}/versions/{VersionId}/edit", replace: true);
             }
         }
@@ -112,14 +118,15 @@ public sealed partial class VersionEditor : IAsyncDisposable
     private async Task BeforeNavigateAsync(LocationChangingContext context)
     {
         _navigationInterop ??= new EditorNavigationInterop(JavaScript);
-        if (!await _navigationInterop.ConfirmDiscardAsync())
+        if (!await _navigationInterop.ConfirmDiscardAsync(LifetimeToken))
         {
             context.PreventNavigation();
         }
     }
 
-    public async ValueTask DisposeAsync()
+    protected override async ValueTask DisposeCoreAsync()
     {
+        await base.DisposeCoreAsync();
         if (_navigationInterop is not null)
         {
             await _navigationInterop.DisposeAsync();

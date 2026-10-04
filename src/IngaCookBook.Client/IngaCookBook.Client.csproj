@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="IngaCookBook.UnitTests" />
     <ProjectReference Include="..\IngaCookBook.UI\IngaCookBook.UI.csproj" />
     <ProjectReference Include="..\IngaCookBook.SharedKernel\IngaCookBook.SharedKernel.csproj" />
   </ItemGroup>

@@ -237,16 +237,26 @@ Razor code-behind too. The explicit-discard preference does not justify discardi
 the asynchronous operation itself; preserve any required `await`. The explicit
 severity records the warning already enabled by the SDK's `All` analysis mode.
 
-Forward cancellation tokens to supporting calls (`CA2016`, warning). The rule
-checks methods with a final `CancellationToken` parameter and calls that can
-accept that token. Explicit `CancellationToken.None` or `default` remains an
-allowed opt-out when cancellation should deliberately not propagate.
+Cancellation uses the already-installed SDK and Meziantou analyzers, with warnings
+failing builds. No custom analyzer or additional package is used:
 
-In Razor code-behind, apply this to token-taking helpers while preserving Blazor
-lifecycle and callback signatures. The rule does not enforce every use of tokens
-stored in component fields or obtained from `HttpContext`; choose the appropriate
-operation lifetime deliberately. The explicit severity records the warning already
-enabled by the SDK's `All` analysis mode.
+| Rule | Enforcement |
+| --- | --- |
+| `CA2016` | Forward an available final token parameter to supporting calls. |
+| `CA1068` | Place token parameters last, subject to the SDK's framework/optional-parameter exceptions. |
+| `MA0040` | Forward tokens available through parameters, properties or token sources. |
+| `MA0079` | Supply an available token to asynchronous enumeration. |
+| `MA0032`, `MA0080` | In `src/**/*.cs`, flag cancellable calls/enumeration even when no token is available. |
+
+`INotebookService` and both implementations have required token arguments. Missing
+arguments are compiler errors. `NotebookContractRequiresAnExplicitFinalCancellationToken`
+also protects that contract for future methods. Preserve framework lifecycle and
+override signatures; use the component's operation/lifetime token inside them.
+The broader Meziantou rules have framework/override exclusions and cannot prove
+that a selected token has the correct lifetime. Explicit `None`/`default` passes
+analysis, so exceptions still need a concrete reason at the call site. The photo
+metadata finalization and host-owned process shutdown are deliberate boundaries.
+See `AGENTS.md` and the notebook feature guide for cancellation ownership.
 
 Eligible private fields must be `readonly` (`IDE0044`, warning) when assigned only
 at declaration or during construction. This includes handwritten Razor code-behind;

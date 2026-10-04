@@ -9,9 +9,9 @@ public sealed partial class Kitchen
     [Parameter] public Guid VersionId { get; set; }
     private RecipeDocument? _recipe;
     private RecipeVersion? _version;
-    protected override Task OnParametersSetAsync() => RunAsync(async () =>
+    protected override Task OnParametersSetAsync() => LoadAsync(async ct =>
     {
-        _recipe = await Notebook.GetRecipeAsync(RecipeId);
+        _recipe = await ReceiveAsync(Notebook.GetRecipeAsync(RecipeId, ct), ct);
         _version = _recipe?.Versions.FirstOrDefault(v => v.Id == VersionId);
     });
 }

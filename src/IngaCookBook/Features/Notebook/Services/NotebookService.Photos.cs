@@ -9,7 +9,7 @@ internal sealed partial class NotebookService
     internal const int MaximumPhotoBytes = 10 * 1024 * 1024;
 
     public async Task<NotebookChange> UploadPhotoAsync(Guid recipeId, Guid versionId, Stream content,
-        string fileName, string contentType, CancellationToken cancellationToken = default)
+        string fileName, string contentType, CancellationToken cancellationToken)
     {
         var workspace = await GetWorkspaceAsync(cancellationToken);
         var recipe = await GetRecipeAsync(recipeId, cancellationToken);
@@ -36,33 +36,46 @@ internal sealed partial class NotebookService
         var id = Guid.NewGuid();
         var key = PhotoKey(workspace.Id, recipeId, versionId, id);
         bytes.Position = 0;
+        cancellationToken.ThrowIfCancellationRequested();
         try
         {
             await photos.SaveAsync(key, bytes, detectedType, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Azure may have accepted the bytes before cancellation was observed.
+            // No metadata write has started, so this unique key is safe to reclaim.
+            await QueueUnconfirmedPhotoAsync(key);
+            throw;
         }
         catch (Exception exception) when (PhotoStorageFailure.IsExpected(exception))
         {
             LogPhotoStorageFailure(logger, exception, id);
             // An upload failure can have an ambiguous remote result. Its unique key can
             // safely be cleaned up even if Azure accepted the bytes before losing the reply.
-            await QueuePhotoCleanupAsync(key, cancellationToken);
+            await QueueUnconfirmedPhotoAsync(key);
             return new ChangeRejected("Photo storage is temporarily unavailable. This photo was not added to your notebook; please try again. Any unconfirmed upload is queued for cleanup.", 503);
         }
         var photo = new RecipePhoto(id, Path.GetFileNameWithoutExtension(fileName)[..Math.Min(Path.GetFileNameWithoutExtension(fileName).Length, 200)],
             detectedType, DateTimeOffset.UtcNow);
+        // Point of no cancellation: the blob is stored. Finish the metadata write
+        // even if the caller leaves. EF/Npgsql command timeouts still apply. Canceling
+        // this write and then deleting the blob could delete a successfully committed
+        // photo when only the database's commit acknowledgement was lost.
         var result = await UpdateAsync(recipeId, recipe.Revision,
-            current => Replace(current, versionId, v => v with { Photos = [.. v.Photos, photo] }), id, cancellationToken);
+            current => Replace(current, versionId, v => v with { Photos = [.. v.Photos, photo] }), id, CancellationToken.None);
         if (result is ChangeRejected)
         {
             // The blob is not referenced if a concurrent edit wins; compensate only this upload.
             try
             {
-                await photos.DeleteAsync(key, cancellationToken);
+                using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                await photos.DeleteAsync(key, cleanup.Token);
             }
-            catch (Exception exception) when (PhotoStorageFailure.IsExpected(exception))
+            catch (Exception exception) when (PhotoStorageFailure.IsExpected(exception) || exception is OperationCanceledException)
             {
                 LogPhotoStorageFailure(logger, exception, id);
-                await QueuePhotoCleanupAsync(key, cancellationToken);
+                await QueueUnconfirmedPhotoAsync(key);
             }
         }
         return result;
@@ -84,11 +97,13 @@ internal sealed partial class NotebookService
     private static string PhotoKey(Guid workspaceId, Guid recipeId, Guid versionId, Guid photoId) =>
         string.Create(CultureInfo.InvariantCulture, $"{workspaceId:N}/{recipeId:N}/{versionId:N}/{photoId:N}");
 
-    private async Task QueuePhotoCleanupAsync(string prefix, CancellationToken cancellationToken)
+    private async Task QueueUnconfirmedPhotoAsync(string prefix)
     {
-        await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
+        // Compensation must survive request cancellation, but must not wait forever.
+        using var cleanup = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await using var db = await contextFactory.CreateDbContextAsync(cleanup.Token);
         db.Add(new PhotoCleanupEntity { Prefix = prefix });
-        await db.SaveChangesAsync(cancellationToken);
+        await db.SaveChangesAsync(cleanup.Token);
     }
 
     [LoggerMessage(EventId = 2102, Level = LogLevel.Warning, Message = "Photo storage failed for upload {PhotoId}; cleanup is being queued.")]

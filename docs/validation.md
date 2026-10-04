@@ -5,6 +5,77 @@ addresses the four usability findings and applies the notebook design to editing
 tasting, history, comparison, photos, and the library. The original review of
 `21f20bb` remains in the workflow log as the baseline.
 
+## Cancellation validation — October 4, 2026
+
+Before implementation, `dotnet test --solution IngaCookBook.slnx --report-trx
+--results-directory TestResults/cancellation-before` executed **554** tests:
+**544 passed, 10 failed, 0 skipped**. Unit (**206**), component (**268**),
+PostgreSQL integration (**65**) and Aspire startup (**1**) all passed. Browser
+coverage passed **4 of 14**; the other ten timed out in Aspire startup before
+reaching their workflows. This was recorded before the cancellation changes.
+Subsequent browser verification runs each existing method's cases together,
+one method at a time, without changing the checked-in parallelism settings.
+
+The regression coverage includes:
+
+| Requirement | Named test evidence |
+| --- | --- |
+| Required token contracts without a custom analyzer | `NotebookContractRequiresAnExplicitFinalCancellationToken`; the solution build enforces CA2016, CA1068, MA0040, MA0032, MA0079 and MA0080 at their documented scopes. |
+| Disposal cancels work and preserves cleanup | `DisposingEditorCancelsSaveAndCleansGuardWithoutReloadingLateSuccess`, `DisposalIsIdempotentAndCancelsBeforeCleanup`. |
+| Reused pages do not publish stale results, errors or busy state | `ReusedEditorCancelsOldLoadAndIgnoresItsLateResultOrFailure`, `OldCompletionCannotUnlockOrPublishOverAStillPendingLoad`, `FailedEditorDependencyLoadDoesNotExposeAnotherRecipesEditableContent`. |
+| SSR request lifetime is separate from interactive lifetime | `RequestAbortCancelsOnlyStaticRendering` (Static, Server and WebAssembly branch cases). |
+| Deadlines preserve inputs and describe uncertain writes accurately | `OperationDeadlineCancelsWorkAndReportsTheAppropriateRecovery`, `TimedOutSaveRetainsEditedInputsAndExplainsUncertainOutcome`, `JournalRetainsInputsWhenConfirmedSaveCannotRefresh` (batch and tasting). |
+| HTTP forwarding, antiforgery and stream cancellation | `EveryNotebookOperationAbortsItsHttpRequest` (15 operations), `CancelingAntiforgeryLookupPreventsTheWrite`, `CancellationReachesStreamingResponseAndUploadBodies`. |
+| A real request abort reaches the backend | `AbortingRealHttpRequestCancelsNotebookEndpointAndEfQuery`, using loopback Kestrel, the production endpoints/service, and an EF command interceptor. |
+| Interrupted writes/uploads preserve data and compensate safely | `AlreadyCanceledOperationsDoNotWriteRecipesOrStartUploads`, `CanceledUploadQueuesOnlyUnconfirmedBlobUsingAnIndependentToken`, `CancellationAfterBlobSuccessFinishesMetadataOrCompensation` (success and conflict). |
+
+The HTTP-to-EF test observes the cancellation token at EF's command boundary;
+it does not measure PostgreSQL's wire-level cancel latency. Blob interruption
+tests use the existing controlled photo store with real PostgreSQL metadata;
+the Aspire/browser suites exercise actual Azurite success and cleanup paths.
+These checks do not claim that cancellation rolls back a completed write,
+immediately disposes a disconnected Server circuit, or guarantees cleanup
+during a simultaneous process/database outage.
+
+After implementation, **592 tests passed, 0 failed, 0 skipped**, including
+**38 new regression cases**:
+
+| Suite | Passed | Failed | Skipped |
+| --- | ---: | ---: | ---: |
+| Unit | 225 | 0 | 0 |
+| Component | 282 | 0 | 0 |
+| PostgreSQL integration | 70 | 0 | 0 |
+| Aspire integration | 1 | 0 | 0 |
+| Browser (seven method groups, two cases each) | 14 | 0 | 0 |
+
+The final journal adjustment also passed the complete unit/component suites and
+the affected workflow, draft-deletion and navigation/journal browser groups again.
+The passing browser total comes from grouped runs, not a successful rerun of the
+initial all-projects-at-once command. No parallel settings or startup timeouts were
+relaxed. TRX reports are under ignored `TestResults/cancellation-after` and
+`TestResults/cancellation-browser`; command logs are `TestResults/cancellation-*.log`.
+
+Commands run from the repository root included:
+
+```powershell
+dotnet build IngaCookBook.slnx
+dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj --no-build --report-trx --results-directory TestResults/cancellation-after
+dotnet test --project tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj --no-build --report-trx --results-directory TestResults/cancellation-after
+dotnet test --project tests/IngaCookBook.IntegrationTests/IngaCookBook.IntegrationTests.csproj --no-build --report-trx --results-directory TestResults/cancellation-after
+dotnet test --project tests/IngaCookBook.AspireIntegrationTests/IngaCookBook.AspireIntegrationTests.csproj --no-build --report-trx --results-directory TestResults/cancellation-after
+# Repeated for each of the seven existing browser test methods.
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-build --filter-method '*CookCanRecordEvaluateCompareAndPrintAnExperiment' --report-trx --results-directory TestResults/cancellation-browser/CookCanRecordEvaluateCompareAndPrintAnExperiment
+pwsh ./scripts/Test-RazorCodeBehind.ps1
+dotnet format IngaCookBook.slnx --severity warn
+dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
+```
+
+The solution build passed with **0 warnings and 0 errors**. All **17** Razor policy
+checks passed. Formatting changes were reviewed, and final verification was clean.
+The test-quality review checked cancellation, stale completion, input retention,
+request boundaries and photo compensation against their observable assertions;
+it is not a line-coverage percentage or an empirical mutation score.
+
 ## Basic PWA validation — October 4, 2026
 
 The online-only installation and update work uses the selected Kitchen Notebook

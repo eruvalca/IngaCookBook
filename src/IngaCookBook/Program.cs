@@ -35,6 +35,9 @@ builder.Services.AddRazorComponents()
     .AddAuthenticationStateSerialization();
 
 builder.Services.AddCascadingAuthenticationState();
+// Consumed only by static renderers; interactive components own their lifetimes.
+builder.Services.AddCascadingValue("RequestAborted", services =>
+    services.GetRequiredService<IHttpContextAccessor>().HttpContext?.RequestAborted ?? CancellationToken.None);
 builder.Services.AddFluentUIComponents();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AccountSignInService>();

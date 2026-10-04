@@ -21,7 +21,7 @@ internal sealed partial class NotebookService(
         return user.Identity?.IsAuthenticated == true ? user.FindFirstValue(ClaimTypes.NameIdentifier) : null;
     }
 
-    public async Task<WorkspaceView?> GetWorkspaceAsync(CancellationToken cancellationToken = default)
+    public async Task<WorkspaceView?> GetWorkspaceAsync(CancellationToken cancellationToken)
     {
         var userId = await UserIdAsync();
         await using var db = await contextFactory.CreateDbContextAsync(cancellationToken);
@@ -29,7 +29,7 @@ internal sealed partial class NotebookService(
             .Select(w => new WorkspaceView(w.Id, w.Name, w.Currency)).SingleOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<RecipeDocument>> GetRecipesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<RecipeDocument>> GetRecipesAsync(CancellationToken cancellationToken)
     {
         var workspace = await GetWorkspaceAsync(cancellationToken);
         if (workspace is null)
@@ -42,7 +42,7 @@ internal sealed partial class NotebookService(
         return entities.Select(RecipeMapping.Read).ToArray();
     }
 
-    public async Task<RecipeDocument?> GetRecipeAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<RecipeDocument?> GetRecipeAsync(Guid id, CancellationToken cancellationToken)
     {
         var workspace = await GetWorkspaceAsync(cancellationToken);
         if (workspace is null)

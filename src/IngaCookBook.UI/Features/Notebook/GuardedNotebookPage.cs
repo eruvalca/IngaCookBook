@@ -5,7 +5,7 @@ using Microsoft.JSInterop;
 namespace IngaCookBook.UI.Features.Notebook;
 
 /// <summary>Shared unsaved-input protection for interactive notebook forms.</summary>
-public abstract class GuardedNotebookPage : NotebookPage, IAsyncDisposable
+public abstract class GuardedNotebookPage : NotebookPage
 {
     [Inject] private IJSRuntime JavaScript { get; set; } = default!;
     private EditorNavigationInterop? _navigation;
@@ -23,20 +23,20 @@ public abstract class GuardedNotebookPage : NotebookPage, IAsyncDisposable
         _savedRevision++;
     }
 
-    protected async Task AcceptChangesAsync()
+    protected async Task AcceptChangesAsync(CancellationToken cancellationToken)
     {
         CaptureSavedState();
         if (_navigation is not null)
         {
             // Programmatic navigation can run before the next render.
-            await _navigation.UpdateAsync(Editor, false, _savedRevision);
+            await _navigation.UpdateAsync(Editor, false, _savedRevision, cancellationToken);
         }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         _navigation ??= new EditorNavigationInterop(JavaScript);
-        await _navigation.UpdateAsync(Editor, Dirty, _savedRevision);
+        await _navigation.UpdateAsync(Editor, Dirty, _savedRevision, LifetimeToken);
         if (!_guardReady)
         {
             _guardReady = true;
@@ -47,18 +47,18 @@ public abstract class GuardedNotebookPage : NotebookPage, IAsyncDisposable
     protected async Task BeforeNavigateAsync(LocationChangingContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        if (_navigation is not null && !await _navigation.ConfirmDiscardAsync())
+        if (_navigation is not null && !await _navigation.ConfirmDiscardAsync(LifetimeToken))
         {
             context.PreventNavigation();
         }
     }
 
-    public async ValueTask DisposeAsync()
+    protected override async ValueTask DisposeCoreAsync()
     {
+        await base.DisposeCoreAsync();
         if (_navigation is not null)
         {
             await _navigation.DisposeAsync();
         }
-        GC.SuppressFinalize(this);
     }
 }

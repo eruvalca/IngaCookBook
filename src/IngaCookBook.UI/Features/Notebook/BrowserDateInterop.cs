@@ -8,10 +8,11 @@ internal sealed class BrowserDateInterop(IJSRuntime runtime) : IAsyncDisposable
     internal const string ModulePath = "./_content/IngaCookBook.UI/Features/Notebook/Pages/BatchJournal.razor.js";
     private IJSObjectReference? _module;
 
-    internal async Task<DateTime> GetTodayAsync()
+    internal async Task<DateTime> GetTodayAsync(CancellationToken cancellationToken)
     {
-        _module ??= await runtime.InvokeAsync<IJSObjectReference>("import", ModulePath);
-        var date = await _module.InvokeAsync<string>("localDate");
+        _module ??= await runtime.InvokeAsync<IJSObjectReference>("import", cancellationToken, ModulePath);
+        var date = await _module.InvokeAsync<string>("localDate", cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         return DateTime.ParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 

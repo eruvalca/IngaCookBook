@@ -117,6 +117,10 @@ dotnet_diagnostic.CA2012.severity = warning
 
 # Forward cancellation parameters to supporting calls; make intentional opt-outs explicit.
 dotnet_diagnostic.CA2016.severity = warning
+dotnet_diagnostic.CA1068.severity = warning
+# Forward tokens from parameters, component lifetime properties, and token sources.
+dotnet_diagnostic.MA0040.severity = warning
+dotnet_diagnostic.MA0079.severity = warning
 
 # Fields already receive their type's default value before construction.
 dotnet_diagnostic.CA1805.severity = warning
@@ -297,6 +301,11 @@ dotnet_diagnostic.IDE0130.severity = warning
 # Component accessibility must match Razor's generated public partial class.
 # Other C# rules continue to apply to code-behind.
 dotnet_diagnostic.CA1515.severity = none
+
+[src/**/*.cs]
+# Require an explicit cancellation decision even when no token is in scope.
+dotnet_diagnostic.MA0032.severity = warning
+dotnet_diagnostic.MA0080.severity = warning
 
 [src/IngaCookBook.AppHost/AppHost.cs]
 # Aspire's conventional entry point contains the implicit top-level Program type.

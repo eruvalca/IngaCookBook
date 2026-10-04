@@ -20,7 +20,7 @@ public sealed partial class NewRecipe
 
     protected override async Task OnInitializedAsync()
     {
-        await RunAsync(async () => { _hasWorkspace = await Notebook.GetWorkspaceAsync() is not null; _loaded = true; });
+        await LoadAsync(async ct => { _hasWorkspace = await ReceiveAsync(Notebook.GetWorkspaceAsync(ct), ct) is not null; _loaded = true; });
         CaptureSavedState();
     }
 
@@ -43,7 +43,7 @@ public sealed partial class NewRecipe
         }
     }
 
-    private Task CreateAsync() => RunAsync(async () =>
+    private Task CreateAsync() => RunAsync(async ct =>
     {
         _nameError = string.IsNullOrWhiteSpace(_name) ? "Enter a recipe name." : null;
         if (_nameError is not null)
@@ -51,11 +51,11 @@ public sealed partial class NewRecipe
             _focusName = true;
             return;
         }
-        var result = await Notebook.CreateRecipeAsync(new(_name, _description, _metrics.Select(m => m.Name).ToArray()));
+        var result = await ReceiveAsync(Notebook.CreateRecipeAsync(new(_name, _description, _metrics.Select(m => m.Name).ToArray()), ct), ct);
         if (Saved(result) && result is ChangeSaved created)
         {
-            var recipe = await Notebook.GetRecipeAsync(created.Id);
-            await AcceptChangesAsync();
+            var recipe = await ReceiveAsync(Notebook.GetRecipeAsync(created.Id, ct), ct);
+            await AcceptChangesAsync(ct);
             Navigation.NavigateTo($"/recipes/{created.Id}/versions/{recipe!.Versions[0].Id}/edit");
         }
     });
