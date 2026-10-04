@@ -16,9 +16,13 @@ var web = builder.AddProject<Projects.IngaCookBook>("ingacookbook")
     .WithExternalHttpEndpoints()
     .WithHttpHealthCheck("/health");
 
-// Local capture is the default only in run mode. Azure delivery requires an explicit opt-in.
-var emailProvider = builder.Configuration["Email:Provider"] ?? (builder.ExecutionContext.IsRunMode ? "Mailpit" : "Azure");
-if (string.Equals(emailProvider, "Mailpit", StringComparison.Ordinal) && builder.ExecutionContext.IsRunMode)
+// Registration and owner-assisted recovery do not require an email service.
+var emailProvider = builder.Configuration["Email:Provider"] ?? "None";
+if (string.Equals(emailProvider, "None", StringComparison.Ordinal))
+{
+    web.WithEnvironment("Email__Provider", "None");
+}
+else if (string.Equals(emailProvider, "Mailpit", StringComparison.Ordinal) && builder.ExecutionContext.IsRunMode)
 {
     var mailpit = builder.AddMailPit("mailpit");
     web.WithReference(mailpit).WaitFor(mailpit)
@@ -36,7 +40,7 @@ else if (string.Equals(emailProvider, "Azure", StringComparison.Ordinal))
 }
 else
 {
-    throw new InvalidOperationException("Email:Provider must be Azure, or Mailpit for local run mode.");
+    throw new InvalidOperationException("Email:Provider must be None, Azure, or Mailpit for local run mode.");
 }
 
 // Pin the managed EF tool to the application's EF Core version rather than the global tool.

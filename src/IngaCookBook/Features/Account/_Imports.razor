@@ -1,3 +1,7 @@
 @using IngaCookBook.Features.Account.Components
 @using IngaCookBook.Features.Account.Models
 @using IngaCookBook.Features.Account.Services
+@using IngaCookBook.Features.Account.Services.Email
+@using Microsoft.Extensions.Options
+
+@inject IOptions<AccountEmailOptions> EmailOptions

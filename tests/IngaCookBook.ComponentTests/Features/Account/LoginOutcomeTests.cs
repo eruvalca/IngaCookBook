@@ -42,7 +42,7 @@ public sealed class LoginOutcomeTests
         await using var context = new BunitContext();
         var account = context.ConfigureAccount();
         var logger = context.CaptureLogs<Login>();
-        account.SignIn.PasswordSignInAsync("member@example.test", "password", true, false)
+        account.SignIn.PasswordSignInAsync("member@example.test", "password", true, true)
             .Returns(lockedOut ? SignInResult.LockedOut : SignInResult.Success);
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/Login?returnUrl=%2Fevents");
@@ -54,7 +54,7 @@ public sealed class LoginOutcomeTests
         await component.Find("form").SubmitAsync();
 
         navigation.Uri.ShouldBe(lockedOut ? "http://localhost/Account/Lockout" : "http://localhost/events");
-        await account.SignIn.Received(1).PasswordSignInAsync("member@example.test", "password", true, false);
+        await account.SignIn.Received(1).PasswordSignInAsync("member@example.test", "password", true, true);
         logger.GetLoggedEventIds().ShouldBe([lockedOut ? 1002 : 1001]);
     }
 

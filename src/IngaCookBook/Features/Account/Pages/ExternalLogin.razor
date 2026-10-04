@@ -23,11 +23,19 @@
 @if (_linkFailure is not null)
 {
     <h1>Finish setting up your account</h1>
-    <ol>
-        <li><a href="Account/ResendEmailConfirmation">Request a confirmation email</a> and confirm your email address.</li>
-        <li><a href="Account/ForgotPassword">Reset your password</a>, then sign in with your email and password.</li>
-        <li>Open <a href="Account/Manage/ExternalLogins">External logins</a> to manage the external account link.</li>
-    </ol>
+    @if (EmailOptions.Value.Enabled)
+    {
+        <ol>
+            <li><a href="Account/ResendEmailConfirmation">Request a confirmation email</a> and confirm your email address.</li>
+            <li><a href="Account/ForgotPassword">Reset your password</a>, then sign in with your email and password.</li>
+            <li>Open <a href="Account/Manage/ExternalLogins">External logins</a> to manage the external account link.</li>
+        </ol>
+    }
+    else
+    {
+        <p>Your account was created, but sign-in could not be connected. <a href="Account/ForgotPassword">Contact the application owner for help</a> before trying to register again.</p>
+        <p>Account reference: <code>@_linkFailure.User.Id</code></p>
+    }
 
 }
 else

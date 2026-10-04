@@ -8,6 +8,10 @@ internal sealed class AccountEmailOptionsValidator(IHostEnvironment environment)
 {
     public ValidateOptionsResult Validate(string? name, AccountEmailOptions options)
     {
+        if (!options.Enabled)
+        {
+            return ValidateOptionsResult.Success;
+        }
         var errors = new List<string>();
         if (!MailboxAddress.TryParse(options.SenderAddress, out var sender) ||
             !string.Equals(sender.Address, options.SenderAddress, StringComparison.Ordinal) ||
@@ -24,7 +28,7 @@ internal sealed class AccountEmailOptionsValidator(IHostEnvironment environment)
             case "Mailpit":
                 if (!environment.IsDevelopment())
                 {
-                    errors.Add("Mailpit is only allowed in Development. Configure Azure email for other environments.");
+                    errors.Add("Mailpit is only allowed in Development. Select None or Azure for other environments.");
                 }
                 if (!Uri.TryCreate(options.MailpitEndpoint, UriKind.Absolute, out var endpoint) ||
                     !string.Equals(endpoint.Scheme, "smtp", StringComparison.Ordinal) || endpoint.Port is < 1 or > 65535 || string.IsNullOrEmpty(endpoint.Host))
@@ -45,7 +49,7 @@ internal sealed class AccountEmailOptionsValidator(IHostEnvironment environment)
                 }
                 break;
             default:
-                errors.Add("Email:Provider must be Mailpit or Azure.");
+                errors.Add("Email:Provider must be None, Mailpit or Azure.");
                 break;
         }
         return errors.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(errors);

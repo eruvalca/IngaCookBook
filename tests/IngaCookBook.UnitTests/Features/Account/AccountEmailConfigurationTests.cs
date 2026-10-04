@@ -18,6 +18,8 @@ public sealed class AccountEmailConfigurationTests
     private const string TestConnection = "endpoint=https://example.communication.azure.com/;accesskey=dGVzdA==";
 
     [Theory]
+    [InlineData("None", "Production", typeof(DisabledEmailTransport))]
+    [InlineData("None", "Development", typeof(DisabledEmailTransport))]
     [InlineData("Mailpit", "Development", typeof(MailpitEmailTransport))]
     [InlineData("Azure", "Development", typeof(AzureEmailTransport))]
     [InlineData("Azure", "Production", typeof(AzureEmailTransport))]
@@ -28,6 +30,9 @@ public sealed class AccountEmailConfigurationTests
         using var scope = host.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IEmailSender<ApplicationUser>>().ShouldBeOfType<IdentityEmailSender>();
         scope.ServiceProvider.GetRequiredService<IAccountEmailTransport>().GetType().ShouldBe(expectedTransport);
+        var identity = scope.ServiceProvider.GetRequiredService<IOptions<IdentityOptions>>().Value;
+        identity.SignIn.RequireConfirmedAccount.ShouldBe(!string.Equals(provider, "None", StringComparison.Ordinal));
+        identity.User.RequireUniqueEmail.ShouldBeTrue();
         await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
@@ -48,6 +53,26 @@ public sealed class AccountEmailConfigurationTests
         using var host = builder.Build();
         var error = await Should.ThrowAsync<OptionsValidationException>(() => host.StartAsync(TestContext.Current.CancellationToken));
         error.Message.ShouldNotContain("secret-invalid-key");
+    }
+
+    [Fact]
+    public async Task ProductionDefaultsNeedNoSenderOrCredentialsAndRejectAccidentalEmailSending()
+    {
+        var builder = new HostApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true, EnvironmentName = "Production" });
+        AccountEmailConfiguration.Configure(builder);
+        using var host = builder.Build();
+        await host.StartAsync(TestContext.Current.CancellationToken);
+
+        var options = host.Services.GetRequiredService<IOptions<AccountEmailOptions>>().Value;
+        options.Enabled.ShouldBeFalse();
+        options.SenderAddress.ShouldBeEmpty();
+        options.AzureConnectionString.ShouldBeEmpty();
+        host.Services.GetRequiredService<IOptions<IdentityOptions>>().Value.SignIn.RequireConfirmedAccount.ShouldBeFalse();
+        var transport = host.Services.GetRequiredService<IAccountEmailTransport>();
+        await Should.ThrowAsync<InvalidOperationException>(() => transport.SendAsync(
+            new("cook@example.test", "subject", "html", "text"), TestContext.Current.CancellationToken));
+
+        await host.StopAsync(TestContext.Current.CancellationToken);
     }
 
     private static HostApplicationBuilder Create(string provider, string environment)

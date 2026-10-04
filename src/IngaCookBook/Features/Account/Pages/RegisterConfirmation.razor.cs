@@ -14,6 +14,10 @@ public sealed partial class RegisterConfirmation
 
     protected override async Task OnInitializedAsync()
     {
+        if (!EmailOptions.Value.Enabled)
+        {
+            return;
+        }
         if (Email is null)
         {
             RedirectManager.RedirectTo("");

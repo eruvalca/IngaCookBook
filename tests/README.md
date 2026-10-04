@@ -17,15 +17,28 @@ isolated AppHost builders for the Aspire and Playwright projects.
 
 ### Account email checks
 
-The test AppHost always supplies `--Email:Provider=Mailpit` before constructing its
-resource graph, overriding a developer's Azure opt-in. Tests never send real Azure
+The existing test AppHost defaults to an explicit `--Email:Provider=Mailpit` before
+constructing its resource graph to retain coverage of the optional email workflow.
+`CreateAsync(enableEmail: false, ...)` supplies `None` for the email-free workflow.
+Both override a developer's Azure opt-in. Tests never send real Azure
 email. Mailpit, PostgreSQL, and Azurite are disposable with dynamically allocated
 ports; no test uses the development inbox or clears another test's messages.
-Each browser test registers a unique recipient and follows its confirmation link
+Browser tests using Mailpit register a unique recipient and follow its confirmation link
 from Mailpit rather than relying on an on-page bypass. `AccountInbox` checks both
 message formats and the local callback origin. `AccountEmailWorkflowTests` exercises
 confirmation-required login, password recovery (including rejection of the old
 password), and changing to a newly verified email address.
+
+`EmailFreeAccountWorkflowTests` owns a separate disposable AppHost without Mailpit
+and verifies immediate registration, authenticated workspace creation, manual
+recovery guidance, the actual server executable's operator command, browser password
+reset, rejection of the old password and isolation from a second account. PostgreSQL-backed
+`AccountRecoveryTests` exercise the operator command's real Identity tokens:
+correct-user binding, expiration, single-use resets, replacement of the password,
+and retention of the workspace, unverified email and two-factor settings. These
+in-process integration tests use an ephemeral Data Protection provider. The browser
+recovery test uses the web app and operator process's shared local key ring to
+exercise the actual cross-process configuration.
 
 Unit tests cover the shared message content/encoding, reset codes, provider selection,
 startup validation, request/shutdown/timeout cancellation, and the Azure SDK adapter's

@@ -25,8 +25,9 @@ Use PowerShell 7 for the scripts in this repository. From the solution root,
 run `dotnet build IngaCookBook.slnx`, then `aspire run`. The first build/start may
 restore NuGet packages, download Aspire/EF tooling, and pull container images.
 Migrations create the Identity and recipe notebook schemas; no accounts, recipes,
-or local credentials are included. Register and confirm an account using the
-confirmation link in the local Mailpit inbox, sign in, then create a workspace at `/workspace`.
+or local credentials are included. Register an account to sign in immediately,
+then create a workspace at `/workspace`. The default `Email:Provider=None` requires
+no email confirmation. For optional local email testing, see [account email](#account-email).
 Git initialization is optional and separate.
 
 If this solution was generated, `.template-provenance.json` records its template
@@ -43,8 +44,10 @@ and volume together if preserving development data.
 ## Run through Aspire
 
 Aspire is the default entry point for running and debugging the application. It
-starts PostgreSQL, Azurite, and the local Mailpit inbox, applies migrations, supplies configuration, and starts the web
-project. The hosted WebAssembly client runs through that web project.
+starts PostgreSQL and Azurite, applies migrations, supplies configuration, and
+starts the web project. The local Mailpit inbox starts only when you explicitly
+select `Email:Provider=Mailpit`. The hosted WebAssembly client runs through the web
+project.
 
 For interactive development, run from the repository root:
 
@@ -304,7 +307,7 @@ postgres (PostgreSQL 18.3, managed data volume)
   └─ pgadmin (explicit start)
 photostorage (Azurite in local run mode, managed data volume)
   └─ recipephotos (private blobs consumed by ingacookbook)
-mailpit (local default, disposable SMTP capture + inbox UI)
+mailpit (optional Email:Provider=Mailpit, disposable SMTP capture + inbox UI)
   └─ ingacookbook (waits for inbox readiness)
 ```
 
@@ -314,7 +317,7 @@ After a normal startup, these dashboard states are expected:
 | --- | --- | --- |
 | `postgres`, `ingacookbookdb` | Running / Healthy | PostgreSQL and the application database are ready. |
 | `photostorage`, `recipephotos` | Running / Healthy | Azure Blob-compatible photo storage is available locally. |
-| `mailpit` | Running / Healthy | Local account-email capture is ready. Absent when Azure email is explicitly selected. |
+| `mailpit` | Absent by default | With `Email:Provider=Mailpit`, Running / Healthy means the optional local email inbox is ready. |
 | `ingacookbook-migrations` | Finished | The one-shot migration command completed successfully. It is not a long-running service. |
 | `ingacookbook` | Running / Healthy | The web application is ready and its database readiness check passes. |
 | `pgadmin` | Not started | Optional database UI; start it when needed. |
@@ -378,16 +381,183 @@ unexpected failures that prevent recording a cleanup job can still require
 operational cleanup.
 
 Identity schema version 3 is retained, including the `AspNetUserPasskeys` table.
-Registration requires email confirmation through the inbox described below. There
-is no on-page confirmation bypass. External-login provider credentials, production
+Registration signs users in immediately by default, without sending email. Email
+addresses remain unverified login identifiers. External-login provider credentials, production
 secrets, HTTPS/domain configuration, deployment, and the desired exposure of health
 endpoints still require application-specific work.
 
+## Planned Azure deployment
+
+Deployment is not implemented or provisioned yet. The selected initial target is
+the default Pay-As-You-Go subscription, **Central US**, in a dedicated
+`rg-ingacookbook-prod` resource group. The intended configuration is Azure Container
+Apps Consumption (one 0.5-vCPU / 1-GiB replica), PostgreSQL Flexible Server
+Standard_B1ms with 32 GiB storage and backups, private LRS blob storage, Basic ACR,
+and the managed Aspire dashboard with bounded telemetry retention. Read-only Azure
+discovery on October 4, 2026 listed Container Apps and B1ms in Central US; this does
+not reserve capacity or establish subscription quota at deployment time.
+
+Use the generated HTTPS hostname, preferably with `ingarecipes` as the app name.
+Container Apps uses `<app>.<environment>.<region>.azurecontainerapps.io`, rather than
+the App Service `azurewebsites.net` suffix. The planned resource-group budget is
+USD 75/month with actual-spend alerts at 50%, 80%, and 100%; alerts do not cap spend.
+Keep the owner's chosen test/alert inbox in deployment configuration rather than
+hard-coding personal contact information in the public repository.
+
+Implementation still needs the Aspire production graph, an explicitly executed
+migration job that gates the web rollout, production health probes and HTTPS/Blazor
+configuration, identities/secrets, and GitHub Actions with OIDC and tests before
+automatic deployments from `main`. Persist and protect a shared ASP.NET Core Data
+Protection key ring across replicas, restarts, and the operator recovery process.
+Preserve Azurite, the optional Mailpit mode, and disposable test resources locally.
+Provisioning requires a deliberate live validation step. The selected initial
+production setup sends no account email and needs no email provider or sender domain.
+Azure budget notifications are independent of application email.
+
 ## Account email
 
-### Local inbox (default)
+### No email required (default)
 
-Start the application through Aspire as usual. The run-mode AppHost adds **mailpit**
+Both the web application and AppHost default to `Email:Provider=None`. Anyone can
+register with an email-shaped login name and password and sign in immediately.
+Registration does not generate a confirmation token, send email, or mark the email
+as verified. Each account creates its own private workspace; registering does not
+grant access to another user's recipes. Existing unconfirmed test accounts can also
+sign in. Failed password attempts count toward Identity's default lockout policy
+(five failed attempts, five-minute lockout).
+
+**My account → Login details** shows the login name and stable account reference.
+Email changes and verification actions are unavailable in this mode. **Forgot your
+password?** explains owner-assisted recovery instead of offering an email form.
+Old confirmation routes do not change or verify an email address when email is
+disabled. Password changes, passkeys, authenticator setup and existing two-factor
+recovery codes remain available. Two-factor recovery codes replace the authenticator
+step; they are not password-reset tokens.
+
+If an earlier local setup explicitly selected Mailpit or Azure, set the AppHost
+user secret `Email:Provider` to `None` and restart Aspire. Leaving an Azure connection
+string configured does not enable sending. A disabled transport throws if an
+unexpected code path attempts email, rather than reporting successful delivery.
+
+### Owner-assisted password recovery
+
+1. Verify the person independently before recovering an account. A claimed email
+   address or account reference is not proof of ownership. Keep your wife's account
+   reference from **Login details** in a safe place. If needed, locate the record by
+   inspecting `AspNetUsers` through a trusted database session and verify it before
+   proceeding; do not reset an arbitrary account solely because someone names its email.
+2. Open a private operator terminal in the deployed application's environment,
+   working directory, and OS identity. The process needs the same database/storage
+   configuration and **Data Protection key ring** as the running web app. Run the
+   published server executable in its administrative mode:
+
+   ```text
+   dotnet IngaCookBook.dll account-recovery --user-id <account-reference> --base-url https://your-app-host/
+   ```
+
+   This mode exits without starting an HTTP listener or background workers. It is
+   not a replacement for Aspire when running the application. For local validation,
+   use the compiled server DLL with the Aspire-provided resource configuration and
+   the same OS user's key ring; a fresh key ring on another machine cannot generate
+   a usable link. The configured application discriminator is `IngaCookBook`.
+3. The command prints the selected account reference and a reset link to that
+   terminal only. Send the link privately after verification. Do not run it in a
+   logged CI job or an Aspire resource command whose output is retained in the
+   dashboard. The base address must be an HTTPS origin without a path, query,
+   fragment, or embedded credentials. Exit codes are 0 (link issued), 1 (account
+   not found), or 2 (invalid arguments); unexpected errors propagate as failures.
+4. The user opens the link, enters their existing login email and a new password.
+   Links expire after one hour and cannot be reused after a successful reset.
+   Issuing a link does not change the password or account; a successful reset
+   invalidates earlier reset tokens through Identity's security stamp. Never share
+   or store a temporary plaintext password.
+
+Recovery preserves the account ID, workspace, recipes, email verification state,
+and two-factor settings. It does not bypass an authenticator or clear an active
+lockout. Someone who also loses their authenticator needs their saved two-factor
+recovery codes; this command handles password recovery only. Browser sessions are
+invalidated according to Identity's normal security-stamp validation intervals,
+not synchronously in every open browser tab.
+
+No public admin-reset endpoint is exposed. Production deployment must make the
+operator terminal and persisted key ring available before rollout. Test an actual
+operator-generated link after deployment. Optional email confirmation/change links
+use the same one-hour Identity data-protection token lifespan.
+
+### Deferred provider alternatives (researched October 4, 2026)
+
+Microsoft's [ACS retirement guide](https://learn.microsoft.com/en-us/azure/communication-services/acs-retirement-and-breaking-changes-guide)
+lists Email for retirement on **September 30, 2028**, with new-customer signup for
+retiring services ending **October 23, 2026**. Do not provision ACS for this rollout.
+Existing local capture and the optional ACS adapter remain
+implemented for explicit opt-in. The initial deployment does not need a replacement;
+the alternatives below are retained as research if automatic email is wanted later.
+
+| Candidate | Cost and deployment implications |
+| --- | --- |
+| Exchange Online Plan 1 + Microsoft Graph | Microsoft lists USD 4/user/month, paid annually. A licensed business mailbox and Exchange permissions are required; a personal Outlook.com account is not this mailbox. Scope application send permission to the dedicated mailbox and use managed identity. Microsoft 365 licensing is separate from the Azure resource-group budget. |
+| Azure Logic Apps Consumption + Outlook.com | Very low usage-based Azure cost and no business mailbox license, using a personal Outlook.com connection authorized interactively by its owner. Connection revocation can require reauthorization; this adds a workflow and an OAuth connection to operate. Use a dedicated sender account, protect the HTTP trigger, hide reset/confirmation content from run history, and retain failure/timeout handling. |
+| SendGrid through Azure Marketplace | The public Marketplace purchase page currently starts at USD 19.95/month. Older references to Azure Free 100 plans do not establish availability for a new subscription. This is a third-party provider purchased through Azure. |
+
+The earlier provider assessment prioritized free or inexpensive third-party options
+without a custom domain or a Microsoft 365 organization. Azure hosting itself does
+not require Microsoft 365; the Exchange alternative above requires a licensed
+organizational mailbox. No replacement provider has been selected or implemented;
+email is disabled for the initial rollout instead.
+
+For the expected single-user volume, the leading domain-free option is a dedicated
+Gmail mailbox sending through authenticated SMTP. This uses an actual `gmail.com`
+sender, with [two-step verification and an app password where supported](https://support.google.com/mail/answer/185833).
+Google recommends OAuth when available; changing the account password revokes app
+passwords, and [consumer sending/abuse limits](https://support.google.com/mail/answer/22839)
+still apply. Keep any app password in server-side secret configuration.
+
+[Purelymail](https://purelymail.com/pricing) is a paid alternative at USD 10/year on
+its simple plan, subject to resource-use limits. Its [shared-domain mailboxes](https://purelymail.com/docs/users)
+avoid buying a domain; the provider documents a small username charge depending on
+length. [SMTP and app passwords](https://purelymail.com/docs/setup/technical) are
+supported. Its service permits transactional mail but is not for marketing or
+mailing lists. This option has not been tested against a live account.
+
+Brevo's free plan includes 300 sends/day, but its [replacement sender for free
+addresses](https://help.brevo.com/hc/en-us/articles/14925263522578-Comply-with-Gmail-Yahoo-and-Microsoft-s-requirements-for-email-senders)
+is explicitly a temporary measure, not a permanent domain-free contract. SMTP2GO's
+[signup requirements](https://www.smtp2go.com/blog/smtp2go-questions-answered/) exclude
+free-provider addresses. These restrictions matter more here than their free quotas.
+
+If automatic email is introduced later, preserve the shared Identity message
+composer and local Mailpit workflow: add the selected provider behind
+`IAccountEmailTransport`, validate configuration and
+cancellation, test failures, and verify live confirmation/password-reset delivery
+to an owned inbox, including SMTP connectivity from the deployed application.
+
+An Exchange mailbox can initially use the tenant's `onmicrosoft.com` address without
+buying a custom domain. Microsoft limits that domain to 100 external recipients per
+organization per rolling 24 hours, which fits this application's expected usage.
+See [initial email addresses](https://learn.microsoft.com/en-us/microsoft-365/admin/email/change-email-address)
+and [Exchange sending limits](https://learn.microsoft.com/en-us/office365/servicedescriptions/exchange-online-service-description/exchange-online-limits).
+
+Outside Azure, [Resend's free plan](https://resend.com/pricing) is a low-volume
+alternative, but [sending to other recipients requires a verified owned domain](https://resend.com/docs/knowledge-base/403-error-resend-dev-domain).
+It is an option if purchasing/configuring a domain is preferable to the Microsoft
+mailbox or connector setup; it is not part of the selected deployment yet.
+
+Sources: [Exchange pricing](https://www.microsoft.com/en-us/microsoft-365/exchange/exchange-online-business-plans-and-pricing),
+[Graph sendMail](https://learn.microsoft.com/en-us/graph/api/user-sendmail),
+[Exchange application RBAC](https://learn.microsoft.com/en-us/exchange/permissions-exo/application-rbac),
+[Outlook.com connector](https://learn.microsoft.com/en-us/connectors/outlook/),
+[Logic Apps pricing](https://azure.microsoft.com/en-us/pricing/details/logic-apps/),
+and [SendGrid Marketplace plans](https://marketplace.microsoft.com/en-us/product/sendgrid.tsg-saas-offer?tab=PlansAndPrice).
+
+### Optional local inbox
+
+Set `Email:Provider=Mailpit` in AppHost user secrets and start through Aspire:
+
+```powershell
+dotnet user-secrets set 'Email:Provider' 'Mailpit' --project src/IngaCookBook.AppHost
+```
+
+The run-mode AppHost then adds **mailpit**
 using `CommunityToolkit.Aspire.Hosting.MailPit` and waits for it before starting the
 web application. Open its **http** endpoint in the Aspire dashboard; ports are
 allocated dynamically. Register with any test address, open the captured confirmation
@@ -404,11 +574,18 @@ the local app origin and only work where that origin is reachable and trusted.
 
 The server accepts `Email:Provider=Mailpit` only in Development. Unknown providers,
 invalid sender addresses, missing endpoints/credentials, or invalid timeouts fail
-startup. The web application defaults to Azure unless Aspire explicitly configures
-Mailpit; the publishing graph never adds a local inbox. EF design-time model creation
+startup. Explicit Mailpit or Azure selection also enables required account
+confirmation and the email recovery/change screens. The web application and AppHost
+otherwise default to `None`; the publishing graph never adds a local inbox.
+Switching email on later requires a confirmation plan for existing unverified users.
+EF design-time model creation
 does not start the host or send email.
 
 ### Optional real Azure delivery during development
+
+These instructions describe the existing ACS adapter, not the recommended new
+deployment path. Review the retirement dates and provider decision above before
+creating resources.
 
 1. Create an **Email Communication Services** resource and provision an Azure-managed
    domain for an initial test, or verify a custom domain (including SPF and DKIM).
@@ -431,8 +608,9 @@ does not start the host or send email.
    you control, confirm it, then test Forgot password and email change. Check the
    inbox/junk folder as well as Azure delivery status. Real sends use Azure resources
    and are billed; they are deliberately excluded from automated tests.
-5. To return to local capture, set `Email:Provider` to `Mailpit` in AppHost user secrets
-   and restart. Leaving Azure credentials configured does not enable Azure sending.
+5. To return to no-email registration, set `Email:Provider` to `None` in AppHost user
+   secrets and restart (or select `Mailpit` for local capture). Leaving Azure
+   credentials configured does not enable Azure sending.
 
 Both providers share the same Identity message composer. Delivery observes the SSR
 request cancellation token, host shutdown, and a 30-second bound (`Email:TimeoutSeconds`
@@ -444,9 +622,9 @@ There is no background delivery queue or application-level automatic resend.
 
 The ACS adapter waits for the send operation to succeed. This means Azure accepted
 the message for delivery, not that it arrived in an inbox. This implementation uses
-a connection string for the local Azure option. Before cloud rollout, provision
-resources/secrets and consider managed identity/Entra authentication instead of an
-access key; deployment automation and delivery-event monitoring are separate work.
+a connection string for the local Azure option. A future production email mode
+would need a selected provider and its authentication/configuration. Deployment
+automation and delivery-event monitoring remain separate work.
 
 References: [Aspire Mailpit integration](https://aspire.dev/integrations/devtools/mailpit/mailpit-host/),
 [Azure resource prerequisites](https://learn.microsoft.com/azure/communication-services/concepts/email/prepare-email-communication-resource),

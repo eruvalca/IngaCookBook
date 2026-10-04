@@ -20,6 +20,11 @@ public sealed partial class ConfirmEmail
 
     protected override async Task OnInitializedAsync()
     {
+        if (!EmailOptions.Value.Enabled)
+        {
+            _statusMessage = "Email confirmation is not required. You can log in with your password or passkey.";
+            return;
+        }
         if (UserId is null || Code is null)
         {
             RedirectManager.RedirectTo("");

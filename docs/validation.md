@@ -5,6 +5,55 @@ addresses the four usability findings and applies the notebook design to editing
 tasting, history, comparison, photos, and the library. The original review of
 `21f20bb` remains in the workflow log as the baseline.
 
+## Email-free registration and owner recovery — October 4, 2026
+
+The pre-change baseline passed **289 unit** and **302 component** tests, with no
+failures or skips. The new default is `Email:Provider=None`; the existing email
+workflows remain opt-in and retain their Mailpit browser coverage.
+
+| Requirement | Evidence |
+| --- | --- |
+| Immediate registration, real cookie sign-in and separate workspaces without email infrastructure | `RegistrationImmediatelyOpensPrivateWorkspaceWithoutAnEmailService` starts the real AppHost without Mailpit, registers two users and verifies their independent workspace state. |
+| Production configuration needs no email credentials | `ProductionDefaultsNeedNoSenderOrCredentialsAndRejectAccidentalEmailSending` starts production options without sender settings and verifies accidental sending fails. `ValidConfigurationStartsAndResolvesTheSelectedSender` checks all supported modes. |
+| Unverified addresses stay unverified; registration skips token generation and sending | `PasswordCreationInitializesUserBeforeCreatingAndReturnsSameUserAsync`, `ExternalCreationInitializesThenLinksTheCreatedUserAsync`, `SuccessfulPasswordRegistrationFollowsConfiguredSignInPolicyAsync`, and `SuccessfulExternalRegistrationFollowsConfiguredSignInPolicyAsync`. |
+| Recovery/confirmation screens do not promise email or accept obsolete actions | `RecoveryAndResendPagesExplainManualHelpWithoutOfferingAnEmailForm`, `LoginAndRegistrationExplainTheEmailFreePolicy`, `LoginDetailsShowAccountReferenceAndDoNotOfferEmailChanges`, and `OldConfirmationLinksCannotChangeOrVerifyEmail`; the browser workflow submits stale forms with a real antiforgery token and verifies HTTP 400. |
+| Trusted operator selection rejects invalid origins, missing arguments/accounts, and token failures without printing a success link | `InvalidArgumentsDoNotLookUpOrModifyAnAccount`, `UnknownAccountProducesNoResetLink`, `VerifiedOperatorSelectionProducesPrivateEncodedLinkWithoutChangingAccount`, and `TokenFailureIsNotReportedAsSuccess`. |
+| Manual recovery works across actual processes and the browser | `RegistrationImmediatelyOpensPrivateWorkspaceWithoutAnEmailService` invokes the compiled server's `account-recovery` mode, consumes its link, rejects the old password, signs in with the new password and reopens the existing workspace. |
+| Real tokens are bound to the account, expire, and cannot be replayed; workspace and two-factor settings survive | `OwnerResetIsBoundToAccountSingleUseAndPreservesWorkspaceAndTwoFactor` and `ExpiredRecoveryTokenCannotChangePassword` use PostgreSQL and real Identity/Data Protection tokens. |
+| Failed password attempts count toward lockout, while optional email still works | `PasswordPreservesRememberMeAndCountsFailuresAsync` and `CookCanConfirmRecoverAndChangeEmailUsingCapturedMessages`. |
+
+The initial full run passed 704/705 tests; the new browser scenario's shell-link
+assertion counted both desktop and mobile navigation copies. It now verifies
+authenticated workspace behavior. A follow-up corrected the test's expectation
+for a missing workspace to match the existing empty HTTP 200 response, rather
+than expecting the literal JSON `null`. The focused browser workflow subsequently
+passed with real operator recovery and stale-form submission checks.
+Full-suite testing also exposed the duplicate-navigation race in the existing
+optional-email test's logout step. Both desktop account workflows now scope that
+action to the desktop navigation instead of matching the mobile drawer as well.
+Another run exposed a photo-picker startup timing failure in the API contract
+scenario. That test now uploads through the real multipart endpoint and verifies
+its HTTP 201 Location, photo response, and cross-account denial, consistently with
+the other API operations in that scenario. The separate recipe and photo-link
+browser scenarios still exercise the interactive picker.
+
+The final full-solution run passed **705 tests**, with **zero failures and zero
+skips**, across all five projects. The focused browser registration/recovery and
+photo API checks also passed individually. Aspire reported no remaining AppHost
+after the disposable test fixtures finished. The final solution build completed
+with zero warnings/errors, and formatting verification passed without changes.
+
+```powershell
+dotnet build IngaCookBook.slnx
+dotnet test --solution IngaCookBook.slnx --no-build
+dotnet format IngaCookBook.slnx --severity warn
+dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
+```
+
+No Azure resources, external email sends, deployment, schema changes, or development
+database resets were involved. Production key-ring persistence and an operator
+terminal still need deployment configuration; see [the recovery runbook](../README.md#owner-assisted-password-recovery).
+
 ## Local account email — October 4, 2026
 
 The pre-change unit/component baseline passed **262 unit** and **304 component**

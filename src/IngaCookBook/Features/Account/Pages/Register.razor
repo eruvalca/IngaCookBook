@@ -24,6 +24,10 @@
     <EditForm class="account-form" Model="Input" method="post" OnValidSubmit="RegisterUserAsync" FormName="register">
         <DataAnnotationsValidator />
         <h2>Create a new account.</h2>
+        @if (!EmailOptions.Value.Enabled)
+        {
+            <p>Your email is your login name. No confirmation email is sent. Save your password; account recovery is handled by the application owner.</p>
+        }
         <hr />
         <ValidationSummary class="error-text" role="alert" />
         <div class="form-field">

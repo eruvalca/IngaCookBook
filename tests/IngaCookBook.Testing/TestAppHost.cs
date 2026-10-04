@@ -45,10 +45,13 @@ public static class TestAppHost
         }
     }
 
-    public static async Task<IDistributedApplicationTestingBuilder> CreateAsync(CancellationToken cancellationToken)
+    public static Task<IDistributedApplicationTestingBuilder> CreateAsync(CancellationToken cancellationToken) =>
+        CreateAsync(enableEmail: true, cancellationToken);
+
+    public static async Task<IDistributedApplicationTestingBuilder> CreateAsync(bool enableEmail, CancellationToken cancellationToken)
     {
         var builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.IngaCookBook_AppHost>(
-            ["--environment=Development", "--Email:Provider=Mailpit"], cancellationToken);
+            ["--environment=Development", enableEmail ? "--Email:Provider=Mailpit" : "--Email:Provider=None"], cancellationToken);
         try
         {
             // Never attach tests to development data. Preserve the real resource graph,

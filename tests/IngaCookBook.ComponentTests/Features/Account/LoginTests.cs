@@ -70,7 +70,7 @@ public sealed class LoginTests
         var account = context.ConfigureAccount();
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/Login?returnUrl=%2Fevents");
-        account.SignIn.PasswordSignInAsync("member@example.test", "password", true, false).Returns(SignInResult.TwoFactorRequired);
+        account.SignIn.PasswordSignInAsync("member@example.test", "password", true, true).Returns(SignInResult.TwoFactorRequired);
         var component = account.Render<Login>(context);
         await component.Find("input[name='Input.Email']").ChangeAsync(new ChangeEventArgs { Value = "member@example.test" });
         await component.Find("input[name='Input.Password']").ChangeAsync(new ChangeEventArgs { Value = "password" });
@@ -79,7 +79,7 @@ public sealed class LoginTests
         await component.Find("form").SubmitAsync();
 
         navigation.Uri.ShouldBe("http://localhost/Account/LoginWith2fa?returnUrl=%2Fevents&rememberMe=True");
-        await account.SignIn.Received(1).PasswordSignInAsync("member@example.test", "password", true, false);
+        await account.SignIn.Received(1).PasswordSignInAsync("member@example.test", "password", true, true);
     }
 
     [Theory]
@@ -91,7 +91,7 @@ public sealed class LoginTests
         var account = context.ConfigureAccount();
         var navigation = context.Services.GetRequiredService<NavigationManager>();
         navigation.NavigateTo("Account/Login");
-        account.SignIn.PasswordSignInAsync("member@example.test", "password", false, false)
+        account.SignIn.PasswordSignInAsync("member@example.test", "password", false, true)
             .Returns(notAllowed ? SignInResult.NotAllowed : SignInResult.Failed);
         var component = account.Render<Login>(context);
         await component.Find("input[name='Input.Email']").ChangeAsync(new ChangeEventArgs { Value = "member@example.test" });

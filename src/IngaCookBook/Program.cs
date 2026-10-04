@@ -14,7 +14,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.FluentUI.AspNetCore.Components;
 
-var builder = WebApplication.CreateBuilder(args);
+var recoveryMode = args.Length > 0 && string.Equals(args[0], "account-recovery", StringComparison.Ordinal);
+var builder = WebApplication.CreateBuilder(recoveryMode ? args[1..] : args);
+if (recoveryMode)
+{
+    // Operator output is private terminal output, never telemetry or a web endpoint.
+    builder.Logging.ClearProviders();
+}
 
 builder.AddServiceDefaults();
 builder.AddAzureBlobServiceClient("recipephotos");
@@ -74,16 +80,23 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options =>
     {
-        options.SignIn.RequireConfirmedAccount = true;
         options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
+AccountRecoveryConfiguration.Configure(builder.Services);
 
 AccountEmailConfiguration.Configure(builder);
 
-var app = builder.Build();
+await using var app = builder.Build();
+if (recoveryMode)
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    Environment.ExitCode = await scope.ServiceProvider.GetRequiredService<AccountRecoveryCommand>()
+        .RunAsync(builder.Configuration["user-id"], builder.Configuration["base-url"], Console.Out, Console.Error);
+    return;
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

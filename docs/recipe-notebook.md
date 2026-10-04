@@ -256,9 +256,12 @@ browser support, icons, and update behavior.
 
 No offline mode, sharing, imports, inventory, nutrition, quantity scaling, or
 ice cream formulation calculator is included. Saving is explicit. No automatic
-conclusion is made about which change caused an improvement. Account email
-delivery and cloud infrastructure need configuration before public deployment;
-the checked-in setup captures confirmation/recovery emails in a local Mailpit inbox
-and uses Azurite. Azure Communication Services Email is an explicit configuration
-option; see [account email setup](../README.md#account-email).
+conclusion is made about which change caused an improvement. Registration is open
+and signs users in immediately without email confirmation; each account's workspace
+remains private. Email addresses are unverified login identifiers. The owner can
+issue a short-lived password-reset link after independently verifying the person;
+see [account recovery](../README.md#owner-assisted-password-recovery). Cloud
+infrastructure and the shared persisted Data Protection key ring still need setup
+before deployment. Local storage uses Azurite; email capture and Azure email are
+explicit opt-in modes, not deployment requirements.
 No deployment or Azure subscription resources are created by these changes.

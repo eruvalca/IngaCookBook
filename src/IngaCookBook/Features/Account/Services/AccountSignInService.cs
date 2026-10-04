@@ -8,7 +8,7 @@ namespace IngaCookBook.Features.Account.Services;
 internal sealed class AccountSignInService(SignInManager<ApplicationUser> signInManager)
 {
     public async Task<SignInOutcome> PasswordAsync(string email, string password, bool rememberMe) =>
-        (await signInManager.PasswordSignInAsync(email, password, rememberMe, lockoutOnFailure: false)).ToSignInOutcome();
+        (await signInManager.PasswordSignInAsync(email, password, rememberMe, lockoutOnFailure: true)).ToSignInOutcome();
 
     public async Task<SignInOutcome> PasskeyAsync(string credentialJson) =>
         (await signInManager.PasskeySignInAsync(credentialJson)).ToSignInOutcome();

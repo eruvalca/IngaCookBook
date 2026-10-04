@@ -50,7 +50,7 @@ public sealed class AccountEmailWorkflowTests(BrowserAppFixture application)
         await page.GetByText("Confirmation link to change email sent. Please check your email.", new() { Exact = true }).WaitForAsync();
         await page.GotoAsync(await AccountInbox.ReadLinkAsync(application, newEmail, "/Account/ConfirmEmailChange", TestContext.Current.CancellationToken));
         await page.GetByText("Thank you for confirming your email change.", new() { Exact = true }).WaitForAsync();
-        await page.GetByRole(AriaRole.Button, new() { Name = "Logout", Exact = true }).ClickAsync();
+        await page.Locator(".site-navigation").GetByRole(AriaRole.Button, new() { Name = "Logout", Exact = true }).ClickAsync();
         await LoginAsync(page, newEmail, NewPassword);
         await page.GetByRole(AriaRole.Heading, new() { Name = "Your recipes", Exact = true }).WaitForAsync();
         await page.GotoAsync("/Account/Manage/Email");

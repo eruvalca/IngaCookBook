@@ -39,6 +39,10 @@ public sealed partial class Email
 
     private async Task OnValidSubmitAsync()
     {
+        if (!EmailOptions.Value.Enabled)
+        {
+            return;
+        }
         if (Input.NewEmail is null || string.Equals(Input.NewEmail, _email, StringComparison.Ordinal))
         {
             _message = "Your email is unchanged.";
@@ -65,6 +69,10 @@ public sealed partial class Email
 
     private async Task OnSendEmailVerificationAsync()
     {
+        if (!EmailOptions.Value.Enabled)
+        {
+            return;
+        }
         if (_email is null)
         {
             return;

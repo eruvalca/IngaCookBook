@@ -23,6 +23,11 @@ public sealed partial class ConfirmEmailChange
 
     protected override async Task OnInitializedAsync()
     {
+        if (!EmailOptions.Value.Enabled)
+        {
+            _message = "Email changes are not available. Contact the application owner for account help.";
+            return;
+        }
         if (UserId is null || Email is null || Code is null)
         {
             RedirectManager.RedirectToWithStatus(

@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using Bunit;
 using IngaCookBook.Data;
 using IngaCookBook.Features.Account.Services;
+using IngaCookBook.Features.Account.Services.Email;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -37,6 +38,8 @@ internal static class BunitAccountExtensions
                 Substitute.For<IAuthenticationSchemeProvider>(), Substitute.For<IUserConfirmation<ApplicationUser>>());
             signIn.GetExternalAuthenticationSchemesAsync().Returns(Array.Empty<AuthenticationScheme>());
             context.Services.AddLogging();
+            // Existing email workflow tests explicitly exercise the opt-in email mode.
+            context.Services.Configure<AccountEmailOptions>(email => email.Provider = "Mailpit");
             context.Services.AddFluentUIComponents();
             var navigationModule = context.JSInterop.SetupModule("./_content/Microsoft.FluentUI.AspNetCore.Components/Components/Nav/FluentNav.razor.js");
             navigationModule.SetupVoid("Microsoft.FluentUI.Blazor.Nav.Initialize", _ => true).SetVoidResult();

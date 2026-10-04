@@ -6,7 +6,7 @@
 <div class="account-navigation">
     <FluentNav UseIcons="false" BackgroundColor="var(--colorNeutralBackground2)" BackgroundColorHover="var(--colorBrandBackground2)" aria-label="Account settings">
         <FluentNavItem Href="Account/Manage" Match="NavLinkMatch.All" tabindex="0">Profile</FluentNavItem>
-        <FluentNavItem Href="Account/Manage/Email" tabindex="0">Email</FluentNavItem>
+        <FluentNavItem Href="Account/Manage/Email" tabindex="0">@(EmailOptions.Value.Enabled ? "Email" : "Login details")</FluentNavItem>
         <FluentNavItem Href="Account/Manage/ChangePassword" tabindex="0">Password</FluentNavItem>
         @if (_hasExternalLogins)
         {

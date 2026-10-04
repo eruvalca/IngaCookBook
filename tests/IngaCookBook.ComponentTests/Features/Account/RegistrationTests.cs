@@ -40,7 +40,7 @@ public sealed class RegistrationTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task SuccessfulPasswordRegistrationConfirmsBeforeFollowingConfiguredSignInPolicyAsync(bool requireConfirmation)
+    public async Task SuccessfulPasswordRegistrationFollowsConfiguredSignInPolicyAsync(bool requireConfirmation)
     {
         await using var context = new BunitContext();
         var account = context.ConfigureAccount();
@@ -58,17 +58,19 @@ public sealed class RegistrationTests
 
         await component.Find("form").SubmitAsync();
 
-        await account.Emails.Received(1).SendConfirmationLinkAsync(Arg.Any<ApplicationUser>(), "member@example.test",
+        if (requireConfirmation)
+        {
+            await account.Emails.Received(1).SendConfirmationLinkAsync(Arg.Any<ApplicationUser>(), "member@example.test",
             Arg.Is<string>(link => link.Contains("Account/ConfirmEmail?userId=member", StringComparison.Ordinal)
                 && link.Contains("code=dG9rZW4", StringComparison.Ordinal)
                 && link.Contains("returnUrl=%2Fevents", StringComparison.Ordinal)));
-        if (requireConfirmation)
-        {
             navigation.Uri.ShouldBe("http://localhost/Account/RegisterConfirmation?email=member%40example.test&returnUrl=%2Fevents");
             await account.SignIn.DidNotReceiveWithAnyArgs().SignInAsync(default!, default(bool), default);
         }
         else
         {
+            await account.Users.DidNotReceiveWithAnyArgs().GenerateEmailConfirmationTokenAsync(default!);
+            await account.Emails.DidNotReceiveWithAnyArgs().SendConfirmationLinkAsync(default!, default!, default!);
             navigation.Uri.ShouldBe("http://localhost/events");
             await account.SignIn.Received(1).SignInAsync(Arg.Any<ApplicationUser>(), false, null);
         }
@@ -117,7 +119,7 @@ public sealed class RegistrationTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task SuccessfulExternalRegistrationConfirmsBeforeFollowingConfiguredSignInPolicyAsync(bool requireConfirmation)
+    public async Task SuccessfulExternalRegistrationFollowsConfiguredSignInPolicyAsync(bool requireConfirmation)
     {
         await using var context = new BunitContext();
         var account = context.ConfigureAccount();
@@ -137,15 +139,17 @@ public sealed class RegistrationTests
         await component.Find("form").SubmitAsync();
 
         await account.Users.Received(1).AddLoginAsync(Arg.Any<ApplicationUser>(), login);
-        await account.Emails.Received(1).SendConfirmationLinkAsync(Arg.Any<ApplicationUser>(), "member@example.test",
-            "http://localhost/Account/ConfirmEmail?userId=member&amp;code=dG9rZW4");
         if (requireConfirmation)
         {
+            await account.Emails.Received(1).SendConfirmationLinkAsync(Arg.Any<ApplicationUser>(), "member@example.test",
+                "http://localhost/Account/ConfirmEmail?userId=member&amp;code=dG9rZW4");
             navigation.Uri.ShouldBe("http://localhost/Account/RegisterConfirmation?email=member%40example.test");
             await account.SignIn.DidNotReceiveWithAnyArgs().SignInAsync(default!, default(bool), default);
         }
         else
         {
+            await account.Users.DidNotReceiveWithAnyArgs().GenerateEmailConfirmationTokenAsync(default!);
+            await account.Emails.DidNotReceiveWithAnyArgs().SendConfirmationLinkAsync(default!, default!, default!);
             navigation.Uri.ShouldBe("http://localhost/events");
             await account.SignIn.Received(1).SignInAsync(Arg.Any<ApplicationUser>(), false, "Provider");
         }

@@ -12,4 +12,11 @@
 
 <StatusMessage Message="@_statusMessage" />
 
-<p role="alert">Please check your email to confirm your account.</p>
+@if (EmailOptions.Value.Enabled)
+{
+    <p role="alert">Please check your email to confirm your account.</p>
+}
+else
+{
+    <p>Email confirmation is not required. <a href="Account/Login">Log in</a> with your password or passkey.</p>
+}

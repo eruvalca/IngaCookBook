@@ -19,6 +19,10 @@ public sealed partial class ForgotPassword
 
     private async Task OnValidSubmitAsync()
     {
+        if (!EmailOptions.Value.Enabled)
+        {
+            return;
+        }
         var user = await UserManager.FindByEmailAsync(Input.Email);
         if (user is null || !(await UserManager.IsEmailConfirmedAsync(user)))
         {

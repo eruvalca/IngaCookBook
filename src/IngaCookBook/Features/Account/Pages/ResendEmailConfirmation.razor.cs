@@ -21,6 +21,10 @@ public sealed partial class ResendEmailConfirmation
 
     private async Task OnValidSubmitAsync()
     {
+        if (!EmailOptions.Value.Enabled)
+        {
+            return;
+        }
         var user = await UserManager.FindByEmailAsync(Input.Email);
         if (user is null)
         {

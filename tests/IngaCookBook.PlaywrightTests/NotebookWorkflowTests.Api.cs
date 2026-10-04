@@ -75,16 +75,17 @@ public sealed partial class NotebookWorkflowTests
             formulation.Status.ShouldBe(200);
             JsonSerializer.Deserialize<RecipeVersion>(await formulation.TextAsync(), JsonSerializerOptions.Web).ShouldNotBeNull().IsLocked.ShouldBeTrue();
 
-            await page.GotoAsync(versionPath.Replace("/api/notebook", "", StringComparison.Ordinal));
-            await page.Locator("input[type=file]:not([disabled])").SetInputFilesAsync(new FilePayload
+            var upload = owner.APIRequest.CreateFormData();
+            upload.Set("file", new FilePayload
             {
                 Name = "private-texture.png",
                 MimeType = "image/png",
                 Buffer = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a0S8AAAAASUVORK5CYII="),
             });
-            await page.GetByRole(AriaRole.Img, new() { Name = "private-texture", Exact = true }).WaitForAsync();
-            recipe = await ReadRecipeAsync(owner.APIRequest, recipePath);
-            var photoPath = $"{versionPath}/photos/{recipe.Versions[0].Photos.Single().Id}";
+            await using var uploaded = await owner.APIRequest.PostAsync(versionPath + "/photos", new() { Headers = headers, Multipart = upload });
+            uploaded.Status.ShouldBe(201);
+            var photoPath = uploaded.Headers["location"];
+            photoPath.ShouldStartWith(versionPath + "/photos/");
             await using var photo = await owner.APIRequest.GetAsync(photoPath);
             photo.Status.ShouldBe(200);
             photo.Headers["content-type"].ShouldBe("image/png");
