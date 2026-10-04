@@ -10,19 +10,19 @@ public sealed partial class NotebookWorkflowTests
         var email = $"cook-{Guid.NewGuid():N}@example.test";
         const string Password = "Kitchen-Test-123!";
         await page.GotoAsync("/Account/Register");
-        await Field(page, "Email").FillAsync(email);
-        await Field(page, "Password").FillAsync(Password);
-        await Field(page, "Confirm Password").FillAsync(Password);
+        await FillFieldAsync(page, "Email", email);
+        await FillFieldAsync(page, "Password", Password);
+        await FillFieldAsync(page, "Confirm Password", Password);
         await page.GetByRole(AriaRole.Button, new() { Name = "Register", Exact = true }).ClickAsync();
         await page.GetByRole(AriaRole.Link, new() { Name = "Click here to confirm your account" }).ClickAsync();
         await page.GetByText("Thank you for confirming your email.").WaitForAsync();
         await page.GotoAsync("/Account/Login");
-        await Field(page, "Email").FillAsync(email);
-        await Field(page, "Password").FillAsync(Password);
+        await FillFieldAsync(page, "Email", email);
+        await FillFieldAsync(page, "Password", Password);
         await page.GetByRole(AriaRole.Button, new() { Name = "Log in", Exact = true }).ClickAsync();
-        await page.GetByRole(AriaRole.Heading, new() { Name = "A little better, every batch.", Exact = true }).WaitForAsync();
+        await page.GetByRole(AriaRole.Heading, new() { Name = "Your recipes", Exact = true }).WaitForAsync();
         await page.GotoAsync("/workspace");
-        await Field(page, "Workspace name").FillAsync("Inga's test kitchen");
+        await FillFieldAsync(page, "Workspace name", "Inga's test kitchen");
         await page.GetByRole(AriaRole.Button, new() { Name = "Create my workspace" }).ClickAsync();
         await page.GetByRole(AriaRole.Heading, new() { Name = "Your recipes", Exact = true }).WaitForAsync();
     }
@@ -31,33 +31,36 @@ public sealed partial class NotebookWorkflowTests
     {
         await page.GetByRole(AriaRole.Link, new() { Name = "+ New recipe", Exact = true }).ClickAsync();
         await InteractiveButton(page, "Create recipe & first version").WaitForAsync();
-        await Field(page, "Recipe name").FillAsync("Brown butter vanilla");
-        await Field(page, "About this recipe").FillAsync("A smooth, scoopable ice cream.");
-        await Field(page, "Evaluation metric").FillAsync("Texture");
+        await ClickButtonAsync(page, "Create recipe & first version");
+        await page.GetByText("Enter a recipe name.", new() { Exact = true }).WaitForAsync();
+        await page.WaitForFunctionAsync("() => { let el = document.activeElement; while (el.shadowRoot?.activeElement) el = el.shadowRoot.activeElement; return el.getAttribute('aria-label')?.startsWith('Recipe name'); }");
+        await FillFieldAsync(page, "Recipe name", "Brown butter vanilla");
+        await FillFieldAsync(page, "About this recipe", "A smooth, scoopable ice cream.");
+        await FillFieldAsync(page, "Evaluation metric", "Texture");
         await VerifyLongFormLayoutAsync(page);
-        await InteractiveButton(page, "Create recipe & first version").ClickAsync();
-        await InteractiveButton(page, "Add ingredient").ClickAsync();
+        await ClickButtonAsync(page, "Create recipe & first version");
+        await ClickButtonAsync(page, "Add ingredient");
         await VerifyDropdownLayoutAsync(page);
-        await Field(page, "Ingredient name").FillAsync("Heavy cream");
-        await Field(page, "Amount").FillAsync("100.123456");
+        await FillFieldAsync(page, "Ingredient name", "Heavy cream");
+        await FillFieldAsync(page, "Amount", "100.123456");
         await Field(page, "Amount").PressAsync("Tab");
-        (await Field(page, "Amount").InputValueAsync()).ShouldBe("100.123456");
-        await Field(page, "Amount").FillAsync("100.1256");
+        (await ReadFieldAsync(page, "Amount")).ShouldBe("100.123456");
+        await FillFieldAsync(page, "Amount", "100.1256");
         await page.GetByText("Purchase cost or linked recipe", new() { Exact = true }).ClickAsync();
-        await Field(page, "Purchased amount").FillAsync("1000");
-        await Field(page, "Purchase price (USD)").FillAsync("8");
-        await InteractiveButton(page, "Add step").ClickAsync();
-        await Field(page, "Step 1").FillAsync("Mix and chill");
+        await FillFieldAsync(page, "Purchased amount", "1000");
+        await FillFieldAsync(page, "Purchase price (USD)", "8");
+        await ClickButtonAsync(page, "Add step");
+        await FillFieldAsync(page, "Step 1", "Mix and chill");
         await SaveDraftAsync(page);
-        (await Field(page, "Amount").InputValueAsync()).ShouldBe("100.1256");
-        (await Field(page, "Purchased amount").InputValueAsync()).ShouldBe("1000");
+        (await ReadFieldAsync(page, "Amount")).ShouldBe("100.1256");
+        (await ReadFieldAsync(page, "Purchased amount")).ShouldBe("1000");
         (await page.Locator("main").InnerTextAsync()).ShouldContain("USD 0.80");
         (await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth")).ShouldBeTrue();
     }
 
     private static async Task SaveDraftAsync(IPage page)
     {
-        await InteractiveButton(page, "Save draft").ClickAsync();
+        await ClickButtonAsync(page, "Save draft");
         await page.GetByText("All changes saved", new() { Exact = true }).WaitForAsync();
         (await page.GetByRole(AriaRole.Alert).CountAsync()).ShouldBe(0);
     }
@@ -76,11 +79,24 @@ public sealed partial class NotebookWorkflowTests
         await image.EvaluateAsync("image => image.decode()");
         (await image.EvaluateAsync<bool>("image => image.complete && image.naturalWidth > 0")).ShouldBeTrue();
         await page.GetByRole(AriaRole.Link, new() { Name = "Make a batch or add a tasting" }).ClickAsync();
-        await InteractiveButton(page, "Record batch").ClickAsync();
-        await Field(page, "Texture").FillAsync("8");
-        await Field(page, "Notes for Texture").FillAsync("Smooth, but a little firm.");
-        await Field(page, "One thing to try next").FillAsync("Try a little more cream.");
-        await InteractiveButton(page, "Save evaluation").ClickAsync();
+        await ClickButtonAsync(page, "Record batch");
+        await ClickButtonAsync(page, "Taste now");
+        var score = page.Locator("fluent-radio[value='8']");
+        await score.ClickAsync();
+        await page.WaitForFunctionAsync("document.querySelector('fluent-radio[value=\"8\"]').matches(':state(checked)')");
+        await score.PressAsync("ArrowRight");
+        await page.WaitForFunctionAsync("document.querySelector('fluent-radio[value=\"9\"]').matches(':state(checked)')");
+        await page.Locator("fluent-radio[value='9']").PressAsync("ArrowLeft");
+        await page.WaitForFunctionAsync("document.querySelector('fluent-radio[value=\"8\"]').matches(':state(checked)')");
+        var targets = await page.Locator("fluent-radio").EvaluateAllAsync<bool>("es => es.every(e => { const r=e.getBoundingClientRect(); return r.width >= 44 && r.height >= 44; })");
+        targets.ShouldBeTrue("Score choices should be comfortable tap targets.");
+        await FillFieldAsync(page, "Notes for Texture", "Smooth, but a little firm.");
+        await FillFieldAsync(page, "One thing to try next", "Try a little more cream.");
+        await ClickButtonAsync(page, "Save evaluation");
+        await page.GetByRole(AriaRole.Heading, new() { Name = "Your tasting is saved.", Exact = true }).WaitForAsync();
+        (await page.Locator(".completion-receipt").InnerTextAsync()).ShouldContain("8 / 10");
+        (await page.Locator(".completion-receipt").InnerTextAsync()).ShouldContain("Try a little more cream.");
+        await ClickButtonAsync(page, "Recorded tastings");
         await page.Locator(".evaluation-entry").Filter(new() { HasText = "Smooth, but a little firm." }).WaitForAsync();
         await page.GetByRole(AriaRole.Link, new() { Name = "← Version details", Exact = true }).ClickAsync();
     }
@@ -99,6 +115,7 @@ public sealed partial class NotebookWorkflowTests
         (await page.Locator(".print-sheet").InnerTextAsync()).ShouldContain("Heavy cream");
         (await page.Locator(".print-sheet").InnerTextAsync()).ShouldContain("Mix and chill");
         (await page.Locator(".no-print").IsVisibleAsync()).ShouldBeFalse();
+        (await page.Locator(".print-sheet h1").EvaluateAsync<string>("el => getComputedStyle(el).outlineStyle")).ShouldBe("none");
         await page.EmulateMediaAsync(new() { Media = Media.Screen });
         if (width < 768)
         {
@@ -119,11 +136,11 @@ public sealed partial class NotebookWorkflowTests
         token.Headers["cache-control"].ShouldBe("no-cache, no-store");
         token.Headers["pragma"].ShouldBe("no-cache");
         await token.DisposeAsync();
-        await Field(page, "Recipe notes").FillAsync("Saved from the browser renderer.");
+        await FillFieldAsync(page, "Recipe notes", "Saved from the browser renderer.");
         await VerifyInputsLockedDuringSaveAsync(page);
         await page.ReloadAsync();
         await page.Locator("[data-renderer=WebAssembly]").WaitForAsync();
-        (await Field(page, "Recipe notes").InputValueAsync()).ShouldBe("Saved from the browser renderer.");
+        (await ReadFieldAsync(page, "Recipe notes")).ShouldBe("Saved from the browser renderer.");
         var response = await page.Context.APIRequest.PostAsync("/api/notebook/recipes", new()
         {
             DataObject = new { name = "Must be rejected", description = "", metrics = Array.Empty<string>() },
@@ -146,14 +163,14 @@ public sealed partial class NotebookWorkflowTests
         });
         try
         {
-            await InteractiveButton(page, "Save draft").ClickAsync();
+            await ClickButtonAsync(page, "Save draft");
             await received.Task.WaitAsync(TimeSpan.FromSeconds(30), ct);
             await page.Locator(".save-bar").GetByText("Saving…", new() { Exact = true }).WaitForAsync();
             foreach (var label in new[] { "Version label", "Amount", "Step 1", "Recipe notes" })
             {
                 (await Field(page, label).IsDisabledAsync()).ShouldBeTrue(label);
             }
-            (await Field(page, "Recipe notes").InputValueAsync()).ShouldBe("Saved from the browser renderer.");
+            (await ReadFieldAsync(page, "Recipe notes")).ShouldBe("Saved from the browser renderer.");
         }
         finally
         {

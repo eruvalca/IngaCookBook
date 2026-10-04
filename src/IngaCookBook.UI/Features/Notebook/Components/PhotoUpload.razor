@@ -4,5 +4,5 @@
 <div class="photo-upload">
     <label for="@_inputId">Add photos (JPEG, PNG, WebP; up to 10 MB each)</label>
     <InputFile id="@_inputId" OnChange="UploadAsync" multiple accept="image/jpeg,image/png,image/webp" disabled="@Disabled" />
-    @if (Busy) { <p role="status">Uploading photo @_uploaded…</p> }
+    @if (Busy) { <p role="status">Uploading @(_uploaded + 1) of @_total · @_uploadingName</p><progress value="@_uploaded" max="@_total" aria-label="Photos saved">@_uploaded of @_total</progress> }
 </div>

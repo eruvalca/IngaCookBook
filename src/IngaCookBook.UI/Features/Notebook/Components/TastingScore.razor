@@ -1,0 +1,18 @@
+<div class="tasting-score">
+    <FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Wrap="true">
+        <h3>@Name</h3><span class="muted">@(string.IsNullOrWhiteSpace(Value) ? "Not assessed" : $"{Value} / 10")</span>
+    </FluentStack>
+    <FluentRadioGroup TValue="string" AriaLabel="@($"Score for {Name}")" Value="@Value" ValueChanged="ValueChanged" Items="_values" RadioLabel="@(value => value)" RadioValue="@(value => value)" Orientation="Orientation.Horizontal" Wrap="true" Disabled="Disabled" Class="score-options" />
+    <FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" Class="score-scale"><span>1 · Needs work</span><span>10 · Exactly right</span></FluentStack>
+    <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)" VerticalAlignment="VerticalAlignment.Center">
+        <details open="@(!string.IsNullOrEmpty(Notes) || !Valid)">
+            <summary>Notes &amp; number entry</summary>
+            <FluentTextArea Disabled="Disabled" Label="@($"Notes for {Name}")" Value="@Notes" ValueChanged="NotesChanged" />
+            <FluentTextInput Disabled="Disabled" Label="@Name" Value="@Value" ValueChanged="ValueChanged" InputMode="TextInputMode.Numeric" Message="@(Valid ? null : "Enter a whole number from 1 to 10, or leave blank.")" MessageState="@(Valid ? null : MessageState.Error)" MessageCondition="FluentFieldCondition.Always" />
+        </details>
+        @if (!string.IsNullOrEmpty(Value))
+        {
+            <FluentButton Appearance="ButtonAppearance.Subtle" Disabled="Disabled" OnClick="ClearAsync" aria-label="@($"Clear score for {Name}")">Clear score</FluentButton>
+        }
+    </FluentStack>
+</div>

@@ -7,15 +7,19 @@
 <SaveNotice Error="@Error" />
 @if (_recipe is not null && _version is not null)
 {
-    <p class="eyebrow">@_recipe.Name · VERSION @_version.Number</p><h1>@_version.Content.Label</h1>
+    <p class="eyebrow">FROM YOUR KITCHEN · VERSION @_version.Number</p><h1>@_recipe.Name</h1><p class="lede">@_recipe.Description</p><p><strong>V@(_version.Number) · @_version.Content.Label</strong></p>
     <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)">
         <span class="badge">@(_version.IsLocked ? "Preserved version" : "Draft")</span>
         @if (_recipe.StandardVersionId == VersionId) { <span class="badge standard">Current standard</span> }
         @if (_version.ParentId is not null) { <a href="@($"/recipes/{RecipeId}/versions/{_version.ParentId}")">View starting version</a> }
-        <a href="@($"/recipes/{RecipeId}/versions/{VersionId}/print")">Print recipe</a>
+        <a href="@($"/recipes/{RecipeId}/versions/{VersionId}/kitchen")">Kitchen view</a><a href="@($"/recipes/{RecipeId}/versions/{VersionId}#photos")">Add photos</a><a href="@($"/recipes/{RecipeId}/versions/{VersionId}/print")">Print recipe</a>
         <a href="@($"/recipes/{RecipeId}/compare?right={VersionId}&left={_version.ParentId}")">Compare changes</a>
     </FluentStack>
     <VersionActions RecipeId="RecipeId" VersionId="VersionId" Revision="_recipe.Revision" Locked="_version.IsLocked" OnlyVersion="@(_recipe.Versions.Count == 1)" IsStandard="@(_recipe.StandardVersionId == VersionId)" @rendermode="InteractiveAuto" />
+    <RecipeNavigation RecipeId="RecipeId" VersionId="VersionId" Section="recipe" />
+    <FluentGrid Spacing="5"><FluentGridItem Xs="12" Md="8">
+    <article class="notebook-panel recipe-sheet"><RecipeSheet Content="_version.Content" /></article>
+    </FluentGridItem><FluentGridItem Xs="12" Md="4">
     @if (!string.IsNullOrWhiteSpace(_version.Content.Hypothesis))
     {
         <section class="experiment-summary"><span class="eyebrow">THE QUESTION BEHIND THIS VERSION</span><p>@_version.Content.Hypothesis</p>
@@ -23,13 +27,19 @@
             @if (!string.IsNullOrWhiteSpace(_version.Content.RelatedChanges)) { <p class="muted">Related changes: @_version.Content.RelatedChanges</p> }
         </section>
     }
-    <article class="notebook-panel recipe-sheet"><RecipeSheet Content="_version.Content" /></article>
-    <section class="notebook-panel">
-        <h2>Ingredient cost</h2><p><strong>@_currency @_cost.KnownTotal.ToString("0.00")</strong> @(_cost.MissingCount == 0 ? "estimated ingredient cost" : "known ingredient cost")</p>
+
+
+    <section class="experiment-summary"><p class="eyebrow">THE LAST TASTING</p>
+    @if (RecipeComparison.LatestEvaluation(_version) is { } latest)
+    { <p>@latest.TastedAt.ToString("MMM d, yyyy")</p><p>@latest.Notes</p><FluentStack Wrap="true">@foreach (var metric in _recipe.Metrics) { var score = latest.Scores.FirstOrDefault(s => s.MetricId == metric.Id); if (score?.Score is not null) { <span class="score-chip">@metric.Name <strong>@score.Score</strong></span> } }</FluentStack> }
+    else { <p class="muted">No tasting yet. Every observation helps shape the next batch.</p> }
+    <a class="action-link" href="@($"/recipes/{RecipeId}/versions/{VersionId}/batches?mode=taste")">Add a tasting</a>
+    </section></FluentGridItem></FluentGrid>
+    <details class="notebook-panel"><summary>Ingredient cost · @_currency @_cost.KnownTotal.ToString("0.00") @(_cost.MissingCount > 0 ? "known cost" : "estimated cost")</summary><p><strong>@_currency @_cost.KnownTotal.ToString("0.00")</strong> @(_cost.MissingCount == 0 ? "estimated ingredient cost" : "known ingredient cost")</p>
         @if (_cost.MissingCount > 0) { <p class="muted">Incomplete estimate: @_cost.MissingCount ingredient(s) are unpriced or use incompatible units.</p> }
-    </section>
-    <section class="notebook-panel">
-        <h2>Photos</h2><p class="muted">Capture the texture, the finish, and the details you want to remember.</p>
+    </details>
+    <section id="photos" class="notebook-panel">
+        <h2>Photos</h2><a href="@($"/recipes/{RecipeId}/settings#recipe-photos")">Choose a cover or edit captions</a><p class="muted">Capture the texture, the finish, and the details you want to remember.</p>
         <FluentGrid Spacing="4">
             @foreach (var photo in _version.Photos)
             {
@@ -39,7 +49,7 @@
         <PhotoUpload RecipeId="RecipeId" VersionId="VersionId" @rendermode="InteractiveAuto" />
     </section>
     <section class="notebook-panel">
-        <h2>Batches &amp; tastings</h2><p>@_version.Batches.Count batches · @_version.Batches.Sum(b => b.Evaluations.Count) evaluations</p>
+        <h2>Batches &amp; tastings</h2><p>@_version.Batches.Count @(_version.Batches.Count == 1 ? "batch" : "batches") · @_version.Batches.Sum(b => b.Evaluations.Count) @(_version.Batches.Sum(b => b.Evaluations.Count) == 1 ? "tasting" : "tastings")</p>
         @foreach (var batch in _version.Batches.OrderByDescending(b => b.MadeAt))
         {
             <details class="batch-history"><summary>Batch made @batch.MadeAt.ToString("MMM d, yyyy") · @batch.Evaluations.Count tastings</summary>

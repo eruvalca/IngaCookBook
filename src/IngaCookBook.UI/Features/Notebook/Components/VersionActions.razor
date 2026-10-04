@@ -3,10 +3,13 @@
 <div class="version-actions">
     <SaveNotice Error="@Error" Status="@Status" />
     <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)" VerticalAlignment="VerticalAlignment.Center">
-        <a class="action-link" href="@($"/recipes/{RecipeId}/versions/{VersionId}/edit")">@(Locked ? "Correct this record" : "Edit draft")</a>
-        <FluentButton Appearance="ButtonAppearance.Primary" Disabled="@Disabled" OnClick="VaryAsync" IconStart="@(new Icons.Regular.Size20.Branch())">Try a variation</FluentButton>
+        @if (!Locked) { <a class="action-link primary" href="@($"/recipes/{RecipeId}/versions/{VersionId}/edit")">Edit draft</a> }
+        else { <a class="action-link primary" href="@($"/recipes/{RecipeId}/versions/{VersionId}/batches?mode=make")">Make a batch</a> }
+        <FluentButton Disabled="@Disabled" OnClick="VaryAsync" IconStart="@(new Icons.Regular.Size20.Branch())">Try a variation</FluentButton>
         <FluentButton Disabled="@(Disabled || IsStandard)" OnClick="StandardAsync" IconStart="@(new Icons.Regular.Size20.Star())">@(IsStandard ? "Current standard" : "Set as standard")</FluentButton>
     </FluentStack>
+    <details class="secondary-actions"><summary>More recipe actions</summary>
+    @if (Locked) { <a class="action-link" href="@($"/recipes/{RecipeId}/versions/{VersionId}/edit")">Correct this record</a> }
     @if (!Locked)
     {
         <DraftDeletion Disabled="@Disabled" OnlyVersion="@OnlyVersion" Confirmed="DeleteDraftAsync" />
@@ -16,6 +19,7 @@
             <FluentTextInput Disabled="@Disabled" Label="New recipe name" @bind-Value="_newName" />
             <FluentButton OnClick="PromoteAsync" Disabled="@Disabled">Create separate recipe</FluentButton>
         </FluentStack>
+    </details>
     </details>
 </div>
 <FluentProviders />

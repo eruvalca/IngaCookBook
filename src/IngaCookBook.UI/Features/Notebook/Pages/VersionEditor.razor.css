@@ -1,5 +1,8 @@
-.ingredient-editor, .step-editor { border-top: 1px solid var(--colorNeutralStroke2); padding-block: var(--spacingVerticalL); }
+.ingredient-editor, .step-editor { border-top: 1px solid var(--colorNeutralStroke2); padding-block: var(--spacingVerticalM); }
 .ingredient-editor > *, .step-editor > * { margin-bottom: var(--spacingVerticalM); }
 .experiment-panel { background: var(--colorBrandBackground2); position: sticky; top: var(--spacingVerticalL); align-self: flex-start; }
 .experiment-panel > * { margin-bottom: var(--spacingVerticalM); }
 .save-bar { position: sticky; bottom: 0; padding: var(--spacingVerticalL); background: var(--colorNeutralBackground1); border: 1px solid var(--colorNeutralStroke2); border-radius: var(--borderRadiusLarge); box-shadow: var(--shadow8); margin-top: var(--spacingVerticalXXL); z-index: 2; }
+.save-bar { padding-bottom: max(var(--spacingVerticalL), env(safe-area-inset-bottom)); }
+.secondary-actions { margin-bottom: var(--spacingVerticalL); }
+.experiment-disclosure > summary { font-weight: var(--fontWeightSemibold); margin-bottom: var(--spacingVerticalM); }

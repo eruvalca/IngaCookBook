@@ -200,6 +200,10 @@ Render boundaries are deliberate:
   through `afterWebStarted`. It closes the Fluent mobile drawer on
   `enhancednavigationstart`, before the DOM update, including back/forward
   navigation. Stable layout/hamburger IDs preserve their JS wiring across updates.
+  The same initializer handles **Skip to content** by focusing the current main
+  region without navigation, including after interactive routing. Its SSR URL
+  remains a working fallback. Section links must include their page path (and
+  any current query string); fragment-only URLs resolve against `<base href="/">`.
   The shell grows with its content and uses document scrolling, allowing Blazor
   to reset scroll position on navigation and restore it through browser history.
   `app.css` explicitly resets the Fluent baseline's body height/overflow. Check

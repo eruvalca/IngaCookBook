@@ -10,10 +10,41 @@
 <SaveNotice Error="@Error" Status="@Status" />
 @if (_recipe is not null && _version is not null)
 {
-    <p class="eyebrow">@_recipe.Name · VERSION @_version.Number</p><h1>Make it. Taste it. Learn.</h1>
-    <p class="lede">Keep each batch and each tasting together, so your observations have context.</p>
-    <FluentGrid Spacing="6" data-renderer="@RendererInfo.Name">
-        <FluentGridItem Xs="12" Md="5">
+    <p class="eyebrow">@_recipe.Name · VERSION @_version.Number</p><h1>@Heading</h1>
+    <RecipeNavigation RecipeId="RecipeId" VersionId="VersionId" Section="taste" />
+    <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)" Class="journal-switcher">
+        <FluentButton Disabled="@JournalDisabled" Appearance="@(View == "batch" ? ButtonAppearance.Primary : ButtonAppearance.Subtle)" OnClick='@(() => ShowView("batch"))'>Record a batch</FluentButton>
+        <FluentButton Disabled="@(JournalDisabled || _version.Batches.Count == 0)" Appearance="@(View == "taste" ? ButtonAppearance.Primary : ButtonAppearance.Subtle)" OnClick='@(() => ShowView("taste"))'>Add a tasting</FluentButton>
+        <FluentButton Disabled="@JournalDisabled" Appearance="ButtonAppearance.Subtle" OnClick='@(() => ShowView("history"))'>Recorded tastings</FluentButton>
+    </FluentStack>
+    @if (_receipt is not null)
+    {
+        <section class="notebook-panel completion-receipt" aria-labelledby="receipt-heading">
+            <p class="eyebrow">IN YOUR NOTEBOOK</p><h2 id="receipt-heading" @ref="_receiptHeading" tabindex="-1">@(_receipt is BatchReceipt ? "Your batch is recorded." : "Your tasting is saved.")</h2>
+            @if (_receipt is BatchReceipt batchReceipt)
+            {
+                <p>Batch @batchReceipt.Number · Made @batchReceipt.MadeAt.ToString("MMM d, yyyy") · @_version.Content.Label</p><p class="preserve-lines">@batchReceipt.Notes</p>
+                <FluentButton Disabled="@JournalDisabled" Appearance="ButtonAppearance.Primary" OnClick='@(() => ShowView("taste"))'>@(_batchId == batchReceipt.BatchId.ToString() ? "Taste now" : "Resume unfinished tasting")</FluentButton>
+                <a class="action-link" href="@($"/recipes/{RecipeId}/versions/{VersionId}")">Later · back to recipe</a>
+            }
+            else if (_receipt is TastingReceipt tastingReceipt)
+            {
+                <p>Batch @tastingReceipt.Number · Tasted @tastingReceipt.TastedAt.ToString("MMM d, yyyy") · @_version.Content.Label</p>
+                <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)">
+                @foreach (var score in tastingReceipt.Scores.Where(s => s.Score is not null))
+                { <span class="score-chip">@(_recipe.Metrics.FirstOrDefault(m => m.Id == score.MetricId)?.Name ?? "Removed criterion") <strong>@score.Score / 10</strong></span> }
+                </FluentStack>
+                <p class="preserve-lines">@tastingReceipt.Notes</p>
+                @foreach (var score in tastingReceipt.Scores.Where(s => !string.IsNullOrWhiteSpace(s.Notes)))
+                { <p><strong>@(_recipe.Metrics.FirstOrDefault(m => m.Id == score.MetricId)?.Name ?? "Removed criterion"):</strong> @score.Notes</p> }
+                @if (!string.IsNullOrWhiteSpace(tastingReceipt.NextIdea))
+                { <h3>One thing to try next</h3><p>@tastingReceipt.NextIdea</p><FluentButton Disabled="@JournalDisabled" OnClick="@(() => TryIdeaAsync(tastingReceipt.Id))">Try this as a variation</FluentButton> }
+                <a class="action-link primary" href="@($"/recipes/{RecipeId}/versions/{VersionId}")">Done · back to recipe</a>
+            }
+        </section>
+    }
+    <div class="journal-form" data-renderer="@RendererInfo.Name">
+        <div hidden="@(View != "batch" || _receipt is not null)">
             <section class="notebook-panel editor-form">
                 <h2 @ref="_batchHeading" tabindex="-1">@(_correctingBatchId is null ? "Make a batch" : "Correct a batch")</h2>
                 @if (_correctingBatchId is null)
@@ -38,8 +69,8 @@
                     }
                 </FluentStack>
             </section>
-        </FluentGridItem>
-        <FluentGridItem Xs="12" Md="7">
+        </div>
+        <div hidden="@(View != "taste" || _receipt is not null)">
             <section class="notebook-panel editor-form">
                 <h2 @ref="_tastingHeading" tabindex="-1">@(_correctingId is null ? "Add a tasting" : "Correct a tasting")</h2>
                 @if (_version.Batches.Count == 0)
@@ -53,13 +84,10 @@
                     <p class="muted">1 = needs work · 10 = exactly right. Leave anything you didn't assess blank.</p>
                     @foreach (var score in _scores)
                     {
-                        <div class="metric-editor" @key="score.Id">
-                            <FluentTextInput Disabled="@JournalDisabled" Label="@score.Name" @bind-Value="score.Text" InputMode="TextInputMode.Numeric"
-                                             Message="@(score.Valid ? null : "Enter a whole number from 1 to 10, or leave blank.")" MessageState="@(score.Valid ? null : MessageState.Error)" MessageCondition="FluentFieldCondition.Always" />
-                            <FluentTextArea Disabled="@JournalDisabled" Label="@($"Notes for {score.Name}")" @bind-Value="score.Notes" Placeholder="What made you choose this score?" />
-                        </div>
+                        <TastingScore Name="@score.Name" @bind-Value="score.Text" @bind-Notes="score.Notes" Disabled="JournalDisabled" @key="score.Id" />
+
                     }
-                    <FluentTextArea Disabled="@JournalDisabled" Label="Overall observations" @bind-Value="_notes" />
+                    <details open="@(!string.IsNullOrWhiteSpace(_notes))"><summary>Overall observations (optional)</summary><FluentTextArea Disabled="@JournalDisabled" Label="Overall observations" @bind-Value="_notes" /></details>
                     <FluentTextArea Disabled="@JournalDisabled" Label="One thing to try next" @bind-Value="_nextIdea" Placeholder="What single change might improve your chosen metric?" />
                     @if (_correctingId is not null)
                     {
@@ -67,7 +95,7 @@
                         <FluentTextArea Disabled="@JournalDisabled" Label="What are you correcting, and why?" @bind-Value="_correctionReason" Required="true" />
                     }
                     <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)">
-                        <FluentButton Disabled="@(JournalDisabled || _tastedDate is null)" Appearance="ButtonAppearance.Primary" OnClick="EvaluateAsync">@(_correctingId is null ? "Save evaluation" : "Save tasting correction")</FluentButton>
+                        <span class="muted">@RatedCount of @_scores.Count qualities rated · blanks stay blank</span><FluentButton Disabled="@(JournalDisabled || _tastedDate is null)" Appearance="ButtonAppearance.Primary" OnClick="EvaluateAsync">@(_correctingId is null ? "Save evaluation" : "Save tasting correction")</FluentButton>
                         @if (_correctingId is not null)
                         {
                             <FluentButton Disabled="@JournalDisabled" OnClick="CancelCorrectionAsync">Cancel correction</FluentButton>
@@ -75,9 +103,9 @@
                     </FluentStack>
                 }
             </section>
-        </FluentGridItem>
-    </FluentGrid>
-    <section class="notebook-panel"><h2>Recorded tastings</h2>
+        </div>
+    </div>
+    <details class="notebook-panel journal-history" open="@(View == "history")"><summary>Recorded tastings · @_version.Batches.Sum(b => b.Evaluations.Count)</summary>
         @foreach (var batch in _version.Batches)
         {
             <h3>Batch @(_version.Batches.ToList().IndexOf(batch) + 1) · @batch.MadeAt.ToString("MMM d, yyyy")</h3>
@@ -94,7 +122,7 @@
                 </article>
             }
         }
-    </section>
+    </details>
 }
 else if (!Busy && Error is null) { <h1>Version not found</h1> }
 </div>

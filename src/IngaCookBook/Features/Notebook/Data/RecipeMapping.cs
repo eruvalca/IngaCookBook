@@ -25,6 +25,7 @@ internal static class RecipeMapping
         Name = entity.Name,
         Description = entity.Description,
         StandardVersionId = entity.StandardVersionId,
+        CoverPhotoId = entity.CoverPhotoId,
         OriginRecipeId = entity.OriginRecipeId,
         OriginVersionId = entity.OriginVersionId,
         UpdatedAt = entity.UpdatedAt,
@@ -89,6 +90,7 @@ internal static class RecipeMapping
         entity.Name = recipe.Name;
         entity.Description = recipe.Description;
         entity.StandardVersionId = recipe.StandardVersionId;
+        entity.CoverPhotoId = recipe.CoverPhotoId;
         entity.OriginRecipeId = recipe.OriginRecipeId;
         entity.OriginVersionId = recipe.OriginVersionId;
         entity.UpdatedAt = recipe.UpdatedAt;

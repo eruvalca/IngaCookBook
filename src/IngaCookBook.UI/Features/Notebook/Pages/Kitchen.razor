@@ -1,0 +1,14 @@
+@page "/recipes/{RecipeId:guid}/versions/{VersionId:guid}/kitchen"
+@attribute [Authorize]
+@inherits NotebookPage
+<PageTitle>Kitchen view · IngaCookBook</PageTitle>
+<a class="back-link" href="@($"/recipes/{RecipeId}/versions/{VersionId}")">← Back to recipe</a>
+<SaveNotice Error="@Error" />
+@if (_recipe is not null && _version is not null)
+{
+    <p class="eyebrow">KITCHEN VIEW · VERSION @_version.Number</p><h1>@_recipe.Name</h1>
+    <p class="lede">@_version.Content.Label @(_version.Content.Yield is { } amount ? $"· Makes {amount} {_version.Content.YieldUnit}" : "")</p>
+    <KitchenSheet Content="_version.Content" @key="_version.Id" @rendermode="InteractiveAuto" />
+    <a class="action-link primary" href="@($"/recipes/{RecipeId}/versions/{VersionId}/batches?mode=make")">Record this batch</a>
+}
+else if (!Busy && Error is null) { <h1>Version not found</h1> }

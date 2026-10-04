@@ -104,16 +104,25 @@ internal sealed partial class NotebookService
         }, versionId, cancellationToken);
     }
 
-    public Task<NotebookChange> SaveSettingsAsync(Guid recipeId, RecipeSettingsRequest request, CancellationToken cancellationToken = default)
+    public async Task<NotebookChange> SaveSettingsAsync(Guid recipeId, RecipeSettingsRequest request, CancellationToken cancellationToken = default)
     {
         var error = NotebookValidation.Settings(request.Name, request.Description, request.Metrics);
         if (error is not null)
         {
-            return Task.FromResult<NotebookChange>(new ChangeRejected(error));
+            return new ChangeRejected(error);
+        }
+        var current = await GetRecipeAsync(recipeId, cancellationToken);
+        if (current is null) { return new ChangeRejected("This recipe could not be found.", 404); }
+        var photoIds = current.Versions.SelectMany(v => v.Photos).Select(p => p.Id).ToHashSet();
+        if (request.CoverPhotoId is { } cover && !photoIds.Contains(cover) ||
+            request.PhotoCaptions?.Any(p => !photoIds.Contains(p.Key) || string.IsNullOrWhiteSpace(p.Value) || p.Value.Length > 200) == true)
+        {
+            return new ChangeRejected("Choose photos from this recipe and enter captions of 1–200 characters.");
         }
         var ids = request.Metrics.Select(m => m.Id).ToHashSet();
-        return UpdateAsync(recipeId, request.Revision, recipe => recipe with
+        return await UpdateAsync(recipeId, request.Revision, recipe => recipe with
         {
+            CoverPhotoId = request.CoverPhotoId,
             Name = request.Name.Trim(),
             Description = request.Description.Trim(),
             // Keep established identities; the server assigns identities to new criteria.
@@ -121,6 +130,7 @@ internal sealed partial class NotebookService
                 ? m : m with { Id = Guid.NewGuid() }).ToArray(),
             Versions = recipe.Versions.Select(v => v with
             {
+                Photos = v.Photos.Select(p => request.PhotoCaptions is not null && request.PhotoCaptions.TryGetValue(p.Id, out var caption) ? p with { Caption = caption.Trim() } : p).ToArray(),
                 Content = v.Content with { TargetMetricId = ids.Contains(v.Content.TargetMetricId ?? Guid.Empty) ? v.Content.TargetMetricId : null },
                 Batches = v.Batches.Select(b => b with
                 {

@@ -73,19 +73,19 @@ public sealed partial class NotebookWorkflowTests
         var editor = page.Url;
         var origin = await page.EvaluateAsync<double>("performance.timeOrigin");
         const string Unsaved = "Do not lose these kitchen notes.";
-        await Field(page, "Recipe notes").FillAsync(Unsaved);
+        await FillFieldAsync(page, "Recipe notes", Unsaved);
         await AttemptNavigationAsync(page, () => page.GetByRole(AriaRole.Link, new() { Name = "← Version details", Exact = true }).ClickAsync(), accept: false);
         page.Url.ShouldBe(editor);
         await AttemptNavigationAsync(page, () => page.GetByRole(AriaRole.Link, new() { Name = "Recipes", Exact = true }).ClickAsync(), accept: false);
         page.Url.ShouldBe(editor);
         await AttemptNavigationAsync(page, () => page.EvaluateAsync("location.reload()"), accept: false, dialogType: "beforeunload");
-        (await Field(page, "Recipe notes").InputValueAsync()).ShouldBe(Unsaved);
+        (await ReadFieldAsync(page, "Recipe notes")).ShouldBe(Unsaved);
         await AttemptNavigationAsync(page, () => page.EvaluateAsync("history.back()"), accept: false);
         await page.WaitForFunctionAsync("url => location.href === url", editor);
-        (await Field(page, "Recipe notes").InputValueAsync()).ShouldBe(Unsaved);
+        (await ReadFieldAsync(page, "Recipe notes")).ShouldBe(Unsaved);
         await AttemptNavigationAsync(page, () => page.EvaluateAsync("history.forward()"), accept: false);
         await page.WaitForFunctionAsync("url => location.href === url", editor);
-        (await Field(page, "Recipe notes").InputValueAsync()).ShouldBe(Unsaved);
+        (await ReadFieldAsync(page, "Recipe notes")).ShouldBe(Unsaved);
         (await page.EvaluateAsync<double>("performance.timeOrigin")).ShouldBe(origin);
 
         await AttemptNavigationAsync(page, () => page.EvaluateAsync("history.forward()"), accept: true);
@@ -93,8 +93,8 @@ public sealed partial class NotebookWorkflowTests
         await page.GetByRole(AriaRole.Link, new() { Name = "Edit draft", Exact = true }).WaitForAsync();
         await page.GoBackAsync();
         await InteractiveButton(page, "Save draft").WaitForAsync();
-        (await Field(page, "Recipe notes").InputValueAsync()).ShouldBeEmpty();
-        await Field(page, "Recipe notes").FillAsync("Kept after saving.");
+        (await ReadFieldAsync(page, "Recipe notes")).ShouldBeEmpty();
+        await FillFieldAsync(page, "Recipe notes", "Kept after saving.");
         await SaveDraftAsync(page);
         // With no Dialog handler Playwright dismisses prompts. A stale guard would
         // therefore prevent this navigation and fail the URL assertion.
@@ -103,8 +103,8 @@ public sealed partial class NotebookWorkflowTests
         (await page.EvaluateAsync<double>("performance.timeOrigin")).ShouldBe(origin);
         await page.GetByRole(AriaRole.Link, new() { Name = "Edit draft", Exact = true }).ClickAsync();
         await InteractiveButton(page, "Save draft").WaitForAsync();
-        (await Field(page, "Recipe notes").InputValueAsync()).ShouldBe("Kept after saving.");
-        await Field(page, "Recipe notes").FillAsync("Discard this edit.");
+        (await ReadFieldAsync(page, "Recipe notes")).ShouldBe("Kept after saving.");
+        await FillFieldAsync(page, "Recipe notes", "Discard this edit.");
         await AttemptNavigationAsync(page, () => page.GetByRole(AriaRole.Link, new() { Name = "← Version details", Exact = true }).ClickAsync(), accept: true);
         await page.WaitForURLAsync(details);
     }
@@ -140,13 +140,16 @@ public sealed partial class NotebookWorkflowTests
         await page.Clock.SetFixedTimeAsync(new DateTime(2001, 10, 3, 0, 30, 0, DateTimeKind.Utc));
         await page.GetByRole(AriaRole.Link, new() { Name = "Make a batch or add a tasting" }).ClickAsync();
         await page.Locator($"[data-renderer={renderer}]").WaitForAsync();
+        await ClickButtonAsync(page, "Record a batch");
         await InteractiveButton(page, "Record batch").WaitForAsync();
-        (await Field(page, "Date made").InputValueAsync()).ShouldBe("2001-10-02");
-        await InteractiveButton(page, "Record batch").ClickAsync();
+        (await ReadFieldAsync(page, "Date made")).ShouldBe("2001-10-02");
+        await ClickButtonAsync(page, "Record batch");
+        await ClickButtonAsync(page, "Add a tasting");
         await InteractiveButton(page, "Save evaluation").WaitForAsync();
-        (await Field(page, "Date tasted").InputValueAsync()).ShouldBe("2001-10-02");
-        await Field(page, "Overall observations").FillAsync("Evening tasting");
-        await InteractiveButton(page, "Save evaluation").ClickAsync();
+        (await ReadFieldAsync(page, "Date tasted")).ShouldBe("2001-10-02");
+        await FillFieldAsync(page, "Overall observations", "Evening tasting");
+        await ClickButtonAsync(page, "Save evaluation");
+        await ClickButtonAsync(page, "Recorded tastings");
         await page.Locator(".evaluation-entry").Filter(new() { HasText = "Evening tasting" }).WaitForAsync();
         await VerifyJournalGuardAndCorrectionsAsync(page, details);
         await page.GotoAsync(details);

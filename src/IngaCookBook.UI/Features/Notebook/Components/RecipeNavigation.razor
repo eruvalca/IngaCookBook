@@ -1,0 +1,8 @@
+<nav class="recipe-navigation" aria-label="Recipe sections">
+    <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalXL)">
+        <a href="@BaseUrl" aria-current="@(Section == "recipe" ? "page" : null)">Recipe</a>
+        <a href="@(BaseUrl + "/batches?mode=taste")" aria-current="@(Section == "taste" ? "page" : null)">Taste</a>
+        <a href="@($"/recipes/{RecipeId}/compare?right={VersionId}")" aria-current="@(Section == "compare" ? "page" : null)">Compare</a>
+        <a href="@($"/recipes/{RecipeId}")" aria-current="@(Section == "history" ? "page" : null)">History</a>
+    </FluentStack>
+</nav>

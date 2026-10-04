@@ -12,6 +12,7 @@ public sealed partial class VersionEditor : IAsyncDisposable
     private readonly QuantityInputCulture _quantityCulture = new();
     [Parameter] public Guid RecipeId { get; set; }
     [Parameter] public Guid VersionId { get; set; }
+    [SupplyParameterFromQuery(Name = "idea")] public Guid? IdeaId { get; set; }
     [Inject] private IJSRuntime JavaScript { get; set; } = default!;
     private RecipeDocument? _recipe;
     private RecipeVersion? _version;
@@ -27,6 +28,7 @@ public sealed partial class VersionEditor : IAsyncDisposable
     private bool EditorDisabled => Disabled || !GuardReady;
     private string SaveStatus => Busy ? "Saving…" : UnsavedStatus;
     private string UnsavedStatus => Dirty ? "Unsaved changes" : "All changes saved";
+    private string ExperimentPlanUrl => new UriBuilder(Navigation.Uri) { Fragment = "experiment-plan" }.Uri.AbsoluteUri;
     private IReadOnlyList<LinkOption> _links = [];
     private IngredientCost Cost => RecipeCosting.Calculate(_draft.ToContent());
     private bool Dirty => _recipe is not null && (!string.Equals(_saved, JsonSerializer.Serialize(_draft), StringComparison.Ordinal)
@@ -47,6 +49,10 @@ public sealed partial class VersionEditor : IAsyncDisposable
         {
             _draft = VersionDraft.From(_version.Content);
             _saved = JsonSerializer.Serialize(_draft);
+            if (!_version.IsLocked && string.IsNullOrWhiteSpace(_draft.Hypothesis) && IdeaId is { } ideaId && _parent?.Batches.SelectMany(b => b.Evaluations).FirstOrDefault(e => e.Id == ideaId) is { } tasting)
+            {
+                _draft.Hypothesis = tasting.NextIdea;
+            }
         }
         var recipes = await Notebook.GetRecipesAsync();
         _links = [new("", "No linked recipe", null), .. recipes.Where(r => r.Id != RecipeId)
@@ -80,6 +86,11 @@ public sealed partial class VersionEditor : IAsyncDisposable
             _saved = JsonSerializer.Serialize(_draft);
             _correctionReason = "";
             _savedRevision++;
+            if (IdeaId is not null)
+            {
+                if (_navigationInterop is not null) { await _navigationInterop.UpdateAsync(_editor, false, _savedRevision); }
+                Navigation.NavigateTo($"/recipes/{RecipeId}/versions/{VersionId}/edit", replace: true);
+            }
         }
     });
 

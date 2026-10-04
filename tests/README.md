@@ -7,10 +7,10 @@ the CLI and editor find `global.json` and `IngaCookBook.slnx`.
 | Project | Scope |
 | --- | --- |
 | `IngaCookBook.UnitTests` | Account services and extensions, outcome decoding, redirects, authentication-state revalidation, Identity endpoint behavior, service defaults, recipe comparisons, validation, photo signatures, and cost calculations. |
-| `IngaCookBook.ComponentTests` | Account workflows, shared components, navigation, error request IDs, Counter, notebook action rendering/conflicts, draft-deletion confirmation and retained inputs after rejection, save-time input locking, score validation, correction forms, browser-date initialization and retained selections, partial upload failures, and nested recipe sheets, using bUnit. |
-| `IngaCookBook.IntegrationTests` | Real PostgreSQL via Testcontainers: migrations (including existing batch-order backfill), Identity, recipe lifecycles, audited batch/tasting corrections and chronology, workspace isolation, concurrency, draft deletion versus preservation in either write order, atomic promotion and cleanup, metric deletion (including correction snapshots), saved nested formulations, account-deletion transactions, and durable photo cleanup/retries. |
+| `IngaCookBook.ComponentTests` | Account workflows, shared components, navigation, error request IDs, Counter, notebook action rendering/conflicts, draft-deletion confirmation and retained inputs after rejection, save-time input locking, additive criterion presets, field errors, saved tasting receipts, next-idea drafts, score validation, correction forms, browser-date initialization and retained selections, partial upload failures, nested recipe sheets, and kitchen notes, using bUnit. |
+| `IngaCookBook.IntegrationTests` | Real PostgreSQL via Testcontainers: migrations (including existing batch-order backfill), Identity, recipe lifecycles, audited batch/tasting corrections and chronology, workspace isolation, concurrency, draft deletion versus preservation in either write order, atomic promotion and cleanup, metric deletion (including correction snapshots), saved nested formulations, account-deletion transactions, and durable photo cleanup/retries, cover selection/captions, and cover fallback after draft deletion. |
 | `IngaCookBook.AspireIntegrationTests` | The real AppHost, database/migration startup dependencies, readiness, resource endpoints, cross-process HTTP behavior, and the hosted cleanup worker deleting scoped Azurite blobs/snapshots. |
-| `IngaCookBook.PlaywrightTests` | Real Chromium: desktop/mobile navigation, Fluent controls, recipe creation/editing, draft deletion from editor/details and only-draft recipe removal under both Auto renderers, compact precise quantities, unsaved creation/settings/editor/journal link/history protection, browser-local dates and timestamp display, invalid scores and audited batch/tasting corrections under both Auto renderers, Azure-compatible photo uploads, comparison, printing, themes, and antiforgery. |
+| `IngaCookBook.PlaywrightTests` | Real Chromium: desktop/mobile navigation, Fluent controls, recipe creation/editing, draft deletion from editor/details and only-draft recipe removal under both Auto renderers, compact precise quantities, unsaved creation/settings/editor/journal link/history protection, browser-local dates and timestamp display, invalid scores and audited batch/tasting corrections under both Auto renderers, Azure-compatible photo uploads, tap/keyboard scoring, kitchen checkmarks, sticky-toolbar focus clearance, comparison, print focus styling, themes, and antiforgery. |
 
 `IngaCookBook.Testing` is a shared support library, not a test project. It configures
 isolated AppHost builders for the Aspire and Playwright projects.
@@ -165,6 +165,10 @@ an `overflow: hidden` body. Inspect rendered control bounds for alignment and
 check light-DOM Fluent internals when changing shared native-control styles.
 Each navigation case attempts to retain `page.png` and `trace.zip` independently
 in a unique `bin/<configuration>/net10.0/TestResults/navigation-*` directory.
+The focused `NotebookLinksReachTheirSectionsAndKeepUnsavedInputs` cases cover
+same-page fragments with unsaved inputs and query parameters, keyboard skip
+focus, photo-section links before/after upload, and notebook/account destinations
+under Server/desktop and WebAssembly/mobile. Their evidence uses `notebook-links-*`.
 Artifact capture is best effort: failures are reported through xUnit test output
 and do not replace the original test failure or prevent the other capture attempt.
 `BrowserArtifactsTests` checks closed-page and unwritable-directory failures;

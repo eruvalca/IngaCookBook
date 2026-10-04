@@ -1,0 +1,6 @@
+.journal-switcher { margin-bottom: var(--spacingVerticalXL); }
+.journal-form, .completion-receipt { max-width: 50rem; margin-inline: auto; }
+.completion-receipt { border-color: var(--colorPaletteGreenForeground1); background: var(--colorPaletteGreenBackground1); }
+.journal-history { margin-top: var(--spacingVerticalXXL); }
+.journal-history > summary { font-size: var(--fontSizeBase400); font-weight: var(--fontWeightSemibold); }
+.completion-receipt .action-link { margin: var(--spacingVerticalM) var(--spacingHorizontalS) 0 0; }

@@ -14,6 +14,8 @@ public sealed partial class BatchJournal
     private async Task CorrectBatchAsync(RecipeBatch batch)
     {
         if (BatchDirty && _navigationInterop is not null && !await _navigationInterop.ConfirmDiscardAsync()) { return; }
+        View = "batch";
+        _receipt = null;
         if (_correctingBatchId is null)
         {
             _recordingDate = _madeDate;

@@ -1,6 +1,7 @@
 @page "/recipes/{RecipeId:guid}/compare"
 @attribute [Authorize]
 @inherits NotebookPage
+@using IngaCookBook.UI.Features.Notebook.Models
 
 <PageTitle>Compare versions · IngaCookBook</PageTitle>
 <a class="back-link" href="@($"/recipes/{RecipeId}")">← Recipe history</a>
@@ -8,8 +9,9 @@
 <SaveNotice Error="@Error" />
 @if (_recipe is not null)
 {
-    <p class="lede">@_recipe.Name · Compare the recipe and the results, side by side.</p>
-    <form method="get" class="notebook-panel">
+    <p class="lede">@_recipe.Name</p>
+    @if (_right is not null) { <RecipeNavigation RecipeId="RecipeId" VersionId="_right.Id" Section="compare" /> }
+    <details class="comparison-selectors"><summary>Choose versions to compare</summary><form method="get" class="notebook-panel">
         <FluentGrid Spacing="4">
             <FluentGridItem Xs="12" Sm="6"><div class="form-field"><label for="left-version">Starting version</label>
                 <select id="left-version" name="left">@foreach (var version in _recipe.Versions) { <option value="@version.Id" selected="@(version.Id == _left?.Id)">V@(version.Number) · @version.Content.Label</option> }</select>
@@ -19,23 +21,27 @@
             </div></FluentGridItem>
         </FluentGrid>
         <p><button class="native-button" type="submit">Compare versions</button></p>
-    </form>
+    </form></details>
     @if (_left is not null && _right is not null)
     {
+        <section class="comparison-overview"><p class="eyebrow">V@(_left.Number) → V@(_right.Number)</p><h2>@_left.Content.Label → @_right.Content.Label</h2><p>@_changes.Count @(_changes.Count == 1 ? "formulation change" : "formulation changes") · selected tasting results below</p>
+        <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)">
+            @foreach (var metric in ObservedMetrics) { var leftScore = _leftEvaluation?.Scores.FirstOrDefault(s => s.MetricId == metric.Id); var rightScore = _rightEvaluation?.Scores.FirstOrDefault(s => s.MetricId == metric.Id); if (leftScore?.Score is not null && rightScore?.Score is not null) { <span class="score-chip">@metric.Name <strong>@leftScore.Score → @rightScore.Score (@Delta(leftScore.Score, rightScore.Score))</strong></span> } }
+        </FluentStack><p class="muted">These observations describe the selected tastings; they do not establish what caused a change.</p></section>
         <section class="notebook-panel">
             <h2>Ingredients &amp; preparation</h2>
             @if (_changes.Count == 0) { <p>No ingredient, preparation, or yield differences.</p> }
             else
             {
                 <div class="table-container"><table><caption>Changes from V@(_left.Number) to V@(_right.Number)</caption><thead><tr><th scope="col">What changed</th><th scope="col">V@(_left.Number)</th><th scope="col">V@(_right.Number)</th></tr></thead>
-                    <tbody>@foreach (var change in _changes) { <tr><th scope="row">@change.Label</th><td class="preserve-lines">@change.Before</td><td class="preserve-lines">@change.After</td></tr> }</tbody>
+                    <tbody>@foreach (var change in _changes) { <tr><th scope="row">@change.Label</th><td class="preserve-lines">@NotebookText.DifferenceValue(change.Before, change.Label)</td><td class="preserve-lines">@NotebookText.DifferenceValue(change.After, change.Label)</td></tr> }</tbody>
                 </table></div>
             }
-            <div class="table-container"><table><caption>Experiment context</caption><thead><tr><th>Context</th><th>V@(_left.Number)</th><th>V@(_right.Number)</th></tr></thead><tbody>
+            <details><summary>Questions, notes &amp; related changes</summary><div class="table-container"><table><caption>Experiment context</caption><thead><tr><th>Context</th><th>V@(_left.Number)</th><th>V@(_right.Number)</th></tr></thead><tbody>
                 <tr><th>Question</th><td>@_left.Content.Hypothesis</td><td>@_right.Content.Hypothesis</td></tr>
                 <tr><th>Related changes</th><td>@_left.Content.RelatedChanges</td><td>@_right.Content.RelatedChanges</td></tr>
                 <tr><th>Recipe notes</th><td>@_left.Content.Notes</td><td>@_right.Content.Notes</td></tr>
-            </tbody></table></div>
+            </tbody></table></div></details>
         </section>
         <section class="notebook-panel">
             <h2>Tasting results</h2><p class="muted">Latest tastings are selected by default. Choose specific batches and tastings for a fair comparison. Blank means not scored.</p>
@@ -49,23 +55,23 @@
             </form>
             <p>@EvaluationLabel(_left, _leftEvaluation) → @EvaluationLabel(_right, _rightEvaluation)</p>
             <div class="table-container"><table class="quality-scores"><caption>Quality scores (1–10)</caption><thead><tr><th>Metric</th><th>V@(_left.Number)</th><th>V@(_right.Number)</th><th>Change</th></tr></thead><tbody>
-                @foreach (var metric in _recipe.Metrics)
+                @foreach (var metric in ObservedMetrics)
                 {
                     var l = _leftEvaluation?.Scores.FirstOrDefault(s => s.MetricId == metric.Id);
                     var r = _rightEvaluation?.Scores.FirstOrDefault(s => s.MetricId == metric.Id);
                     <tr><th scope="row">@metric.Name</th><td><strong>@(l?.Score?.ToString() ?? "—")</strong><p>@l?.Notes</p></td><td><strong>@(r?.Score?.ToString() ?? "—")</strong><p>@r?.Notes</p></td><td>@Delta(l?.Score, r?.Score)</td></tr>
                 }
             </tbody></table></div>
+            @if (UnassessedMetrics.Any()) { <details><summary>@UnassessedMetrics.Count() unassessed qualities</summary><ul>@foreach (var metric in UnassessedMetrics) { <li>@metric.Name · not scored in either tasting</li> }</ul></details> }
             <FluentGrid Spacing="4"><FluentGridItem Xs="12" Sm="6"><h3>V@(_left.Number) observations</h3><p>@_leftEvaluation?.Notes</p><p><strong>Next idea:</strong> @_leftEvaluation?.NextIdea</p></FluentGridItem><FluentGridItem Xs="12" Sm="6"><h3>V@(_right.Number) observations</h3><p>@_rightEvaluation?.Notes</p><p><strong>Next idea:</strong> @_rightEvaluation?.NextIdea</p></FluentGridItem></FluentGrid>
         </section>
         <FluentGrid Spacing="4">
             @foreach (var version in new[] { _left, _right })
             {
-                <FluentGridItem Xs="12" Sm="6"><section class="notebook-panel"><h2>V@(version.Number) photos</h2>
+                <FluentGridItem Xs="12" Sm="6"><details class="notebook-panel"><summary>V@(version.Number) photos · @version.Photos.Count</summary>
                     @foreach (var photo in version.Photos) { <img class="comparison-photo" src="@($"/api/notebook/recipes/{RecipeId}/versions/{version.Id}/photos/{photo.Id}")" alt="@photo.Caption" loading="lazy" /> }
-                </section></FluentGridItem>
+                </details></FluentGridItem>
             }
         </FluentGrid>
     }
 }
-

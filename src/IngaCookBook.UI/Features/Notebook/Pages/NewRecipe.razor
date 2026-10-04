@@ -13,9 +13,9 @@
 @if (_hasWorkspace)
 {
     <FluentStack Orientation="Orientation.Vertical" VerticalGap="var(--spacingVerticalL)" Class="notebook-panel editor-form">
-        <FluentTextInput Disabled="@FormDisabled" Label="Recipe name" @bind-Value="_name" MaxLength="200" Placeholder="e.g. Brown butter vanilla ice cream" />
-        <FluentTextArea Disabled="@FormDisabled" Label="About this recipe" @bind-Value="_description" Placeholder="What do you want this recipe to be?" />
-        <h2>What makes it good?</h2><p>Choose the qualities you want to evaluate. Each gets a 1–10 score, where 10 is best, and optional notes.</p>
+        <FluentTextInput @ref="_nameInput" Disabled="@FormDisabled" Label="Recipe name" @bind-Value="_name" MaxLength="200" Required="true" Message="@_nameError" MessageState="@(_nameError is null ? null : MessageState.Error)" MessageCondition="FluentFieldCondition.Always" Placeholder="e.g. Brown butter vanilla ice cream"><MessageTemplate>@if (_nameError is not null) { <span role="alert">@_nameError</span> }</MessageTemplate></FluentTextInput>
+        <FluentTextArea Disabled="@FormDisabled" Label="About this recipe" MaxLength="4000" @bind-Value="_description" Placeholder="What do you want this recipe to be?" />
+        <details><summary>What makes it good? · @_metrics.Count evaluation @(_metrics.Count == 1 ? "criterion" : "criteria")</summary><p>Start with overall satisfaction, or add qualities that matter to you. You can adjust these later. Each gets a 1–10 score and optional notes.</p>
         @foreach (var metric in _metrics)
         {
             <FluentStack @key="metric.Id" VerticalAlignment="VerticalAlignment.Bottom" Class="control-row" HorizontalGap="var(--spacingHorizontalM)">
@@ -27,6 +27,7 @@
             <FluentButton OnClick="AddMetric" Disabled="@FormDisabled" IconStart="@(new Icons.Regular.Size20.Add())">Add metric</FluentButton>
             <FluentButton OnClick="UseIceCreamMetrics" Disabled="@FormDisabled">Use ice cream starter metrics</FluentButton>
         </FluentStack>
+        </details>
         <FluentButton OnClick="CreateAsync" Disabled="@FormDisabled" Appearance="ButtonAppearance.Primary">Create recipe &amp; first version</FluentButton>
     </FluentStack>
 }

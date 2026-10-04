@@ -92,6 +92,39 @@ public sealed class NotebookComponentsTests
         component.Markup.ShouldContain("Keep chilled");
     }
 
+    [Fact]
+    public async Task KitchenSheetRendersRecipeNotesAsPlainTextWithLineBreaks()
+    {
+        await using var context = new BunitContext();
+        context.Services.AddFluentUIComponents();
+        context.ComponentFactories.AddStub<FluentProviders>();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Renderer.SetRendererInfo(new RendererInfo("Static", false));
+        const string Notes = "Rest overnight.\nServe with <b>caramel</b>.\nStore covered.";
+        var content = new RecipeContent { Notes = Notes };
+        var component = context.Render<KitchenSheet>(p => p.Add(c => c.Content, content));
+
+        component.FindAll("h2").ShouldContain(h => string.Equals(h.TextContent, "Recipe notes", StringComparison.Ordinal));
+        component.Find(".preserve-lines").TextContent.ShouldBe(Notes);
+        component.FindAll("b").ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" \n\t")]
+    public async Task KitchenSheetOmitsEmptyRecipeNotes(string notes)
+    {
+        await using var context = new BunitContext();
+        context.Services.AddFluentUIComponents();
+        context.ComponentFactories.AddStub<FluentProviders>();
+        context.JSInterop.Mode = JSRuntimeMode.Loose;
+        context.Renderer.SetRendererInfo(new RendererInfo("Static", false));
+        var component = context.Render<KitchenSheet>(p => p.Add(c => c.Content, new RecipeContent { Notes = notes }));
+
+        component.FindAll("h2").ShouldNotContain(h => string.Equals(h.TextContent, "Recipe notes", StringComparison.Ordinal));
+        component.FindAll(".preserve-lines").ShouldBeEmpty();
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

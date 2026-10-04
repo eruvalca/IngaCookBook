@@ -9,6 +9,7 @@ public sealed record RecipeDocument
     public string Description { get; init; } = "";
     public IReadOnlyList<EvaluationMetric> Metrics { get; init; } = [];
     public IReadOnlyList<RecipeVersion> Versions { get; init; } = [];
+    public Guid? CoverPhotoId { get; init; }
     public Guid? StandardVersionId { get; init; }
     public IReadOnlyList<StandardSelection> Standards { get; init; } = [];
     public Guid? OriginRecipeId { get; init; }

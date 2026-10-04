@@ -1,0 +1,8 @@
+@using IngaCookBook.UI.Features.Notebook.Models
+<ul class="change-summary">
+    @foreach (var change in Changes.Take(Limit))
+    {
+        <li><strong>@change.Label</strong><span class="change-values">@NotebookText.DifferenceValue(change.Before, change.Label) <span aria-label="to">→</span> @NotebookText.DifferenceValue(change.After, change.Label)</span></li>
+    }
+</ul>
+@if (Changes.Count > Limit) { <p class="muted">@(Changes.Count - Limit) more changes in the comparison.</p> }

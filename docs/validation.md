@@ -1,5 +1,160 @@
 # Recipe notebook verification
 
+The approved [UI/UX implementation](workflow-qa.md#uiux-implementation-follow-up--october-4-2026)
+addresses the four usability findings and applies the notebook design to editing,
+tasting, history, comparison, photos, and the library. The original review of
+`21f20bb` remains in the workflow log as the baseline.
+
+## Section-link validation
+
+`NotebookWorkflowTests.NotebookLinksReachTheirSectionsAndKeepUnsavedInputs` passed
+both cases: desktop (1280 px, Server) and mobile (390 px, WebAssembly).
+
+| Requirement | Browser evidence in each case |
+| --- | --- |
+| Add photos reaches the current version's uploader. | Clicked the link, checked its URL fragment and visible section, retained document identity, and uploaded a PNG. |
+| Experiment-plan navigation retains unfinished work. | Clicked from an editor with an idea query parameter; checked the query, visible target, unchanged notes/quantity, and document identity. |
+| Keyboard skip stays on the current page. | Activated with Enter in the editor, version, photo settings, and static account pages; checked main-region focus, unchanged URL, and document identity. |
+| Cover/caption navigation has a useful destination. | Followed the link before and after upload, checking the open section, empty-state explanation, and visible caption input. |
+| Other primary destinations resolve. | Followed kitchen, print, comparison, history/branch, tasting, workspace/library, and account/profile/email/password links. No page errors or HTTP 5xx responses were observed during these interactions. |
+
+```powershell
+dotnet build IngaCookBook.slnx
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --filter-method '*NotebookLinksReachTheirSectionsAndKeepUnsavedInputs'
+dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj --no-build
+dotnet format IngaCookBook.slnx --severity warn
+dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
+```
+
+Results: browser **Passed: 2, Failed: 0, Skipped: 0**; unit **Passed: 206,
+Failed: 0, Skipped: 0**; component **Passed: 268, Failed: 0, Skipped: 0**.
+The solution build passed with zero warnings/errors. Logs are under ignored
+`TestResults/link-fixes-*.log`; formatting was reviewed and verification was clean.
+Browser screenshots/traces use the test output's
+`notebook-links-*` directories. The first browser run reached the final account
+page but failed both cases because the test expected “Current password” instead
+of “Old password”; correcting the locator produced the clean run above.
+The first sandboxed build could not read the user NuGet configuration; the
+authorized build with normal cache/configuration access succeeded.
+
+This is focused Chromium coverage, not an exhaustive crawl of all account states,
+external URLs, or other browser engines. Isolated fixtures own and dispose their
+Aspire resources and test data. Server cases intentionally hold and then abort
+WebAssembly downloads to select the renderer, so teardown traces may show aborted
+asset downloads; these are not link failures.
+
+## UI/UX implementation validation — October 4, 2026
+
+### Code-review follow-up
+
+The two review findings are addressed:
+
+| Requirement | Evidence |
+| --- | --- |
+| Kitchen view retains saved notes, line breaks, and literal text without displaying an empty section. | `NotebookComponentsTests.KitchenSheetRendersRecipeNotesAsPlainTextWithLineBreaks` and `KitchenSheetOmitsEmptyRecipeNotes` (empty and whitespace cases). The focused `dotnet test --project tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj --filter-method '*KitchenSheet*'` run passed all three cases, zero failed/skipped. |
+| Deletion from version details cannot target the outgoing editor. | `NotebookWorkflowTests.CookCanDiscardDraftsWithoutLosingPreservedHistory` now waits for `.version-actions` and scopes both deletion controls to it, retaining the remaining-history assertions. |
+
+`dotnet build IngaCookBook.slnx` passed with zero warnings/errors. The full unit
+suite passed 206 tests and the component suite passed 268, both zero failed/skipped,
+using their documented `dotnet test --project ... --no-build` commands. Current
+follow-up logs are in ignored `TestResults/uiux-review-fixes/`.
+`dotnet format IngaCookBook.slnx --severity warn` completed with its fixes reviewed;
+the final `dotnet format IngaCookBook.slnx --severity warn --verify-no-changes`
+passed without changes. No validation AppHost remained running after the tests.
+
+`dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --filter-method '*CookCanDiscardDraftsWithoutLosingPreservedHistory*'`
+passed both Server/desktop and WebAssembly/phone scenarios: two passed, zero
+failed/skipped. An initial attempt failed both cases because the generic reveal
+helper's relative locator could not open the newly scoped action menu; the test
+now opens that menu explicitly before using its scoped delete controls. The
+failed log is retained alongside the successful rerun. The new component-test
+setup was also corrected to supply renderer information and explicit string
+comparison before its passing runs.
+
+Documentation review confirmed that setup, build rules, and agent conventions
+remain accurate. The existing product guide, workflow log, test scope, and this
+validation record were updated for the two fixes.
+
+### Original implementation checks
+
+- `dotnet build IngaCookBook.slnx --no-restore`: passed, zero warnings/errors.
+- `dotnet format IngaCookBook.slnx --severity warn` completed; its fixes were
+  reviewed. The final `dotnet format IngaCookBook.slnx --severity warn --verify-no-changes`
+  passed without changes.
+- `dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj --no-build`:
+  206 passed, zero failed/skipped.
+- `dotnet test --project tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj --no-build`:
+  265 passed, zero failed/skipped. New cases cover required-name rejection, additive
+  presets, retained forms when switching journal tasks, tasting receipts, and
+  editable next-idea drafts including saving a revised question.
+- `dotnet test --solution IngaCookBook.slnx --no-build`: 543 passed, four failed,
+  zero skipped out of 547. Unit, component, PostgreSQL integration, and Aspire
+  integration projects passed. Three browser cases timed out during Aspire
+  startup; one browser assertion still expected history to be expanded after a
+  reload. The assertion now opens the recorded-tastings view before checking it.
+- Repeating the complete Playwright project: nine passed, one failed during
+  Aspire startup, zero skipped. The focused
+  `--filter-method '*EditorProtectsEnhancedNavigationAndJournalUsesBrowserDates*'`
+  rerun then passed both Server and WebAssembly cases, zero failed/skipped.
+  All 547 distinct cases therefore passed across these runs; this does **not**
+  describe a single clean full-solution run.
+- Cover/caption integration tests verify persistence, stale-write rejection,
+  workspace ownership, foreign photo rejection, and fallback after deleting the
+  draft that supplied the cover. The `RecipeCoverPhoto` migration was generated
+  through Aspire's migration resource and applied normally, retaining test data.
+- A subsequent desktop/phone workflow rerun exposed an immediate assertion after
+  kitchen Reset. The test now waits for cleared checkmarks before asserting;
+  both cases passed on rerun. This timing correction does not relax the expected
+  result. The 320 px manual pass also found a dropdown minimum-width overflow,
+  now covered by the editor's responsive browser check.
+- After the responsive fix, the focused
+  `--filter-method '*CookCanRecordEvaluateCompareAndPrintAnExperiment*'` run passed
+  both desktop and phone cases (two passed, zero failed/skipped). The 206 unit
+  and 265 component cases also passed again with zero failures/skips.
+- The final kitchen-only CSS adjustment was rebuilt and checked manually:
+  checkboxes measure 44 × 44 px, clicking their labels marks completion, completed
+  labels have a strike-through, and Reset clears the checkmarks. No document
+  overflow was observed at 320 px.
+
+Real-browser checks include required-field focus, Tab/Shift+Tab clearance above
+the sticky save bar, discrete score selection and arrow keys, retained precision,
+kitchen checkmarks/reset, completion summaries, print focus styling, themes,
+draft deletion, and correction/navigation guards under both Auto renderers.
+Earlier runs exposed selector assumptions and a manual-preview/test-host lifecycle
+collision; they were not counted as passes. Infrastructure failures remain visible
+in the ignored logs under `TestResults/uiux-implementation/`.
+
+Manual exploration additionally verified cover selection/caption edits and the
+saved-tasting → new variation → revised question → save → reload workflow. It
+observed no uncaught browser exceptions or application warning/error entries in
+that run. Final viewport checks found no document-width overflow at 320 px in
+the editor, library, history, comparison, and tasting views; comparison was also
+checked at 768 px. The 390 px scoring controls measured approximately 54 × 44 px,
+with five choices per row. Chromium's accessibility tree exposed named radio
+groups and numbered radio options. System-theme changes were exercised in both
+directions. These checks do not substitute for assistive-technology testing.
+
+On the same four-ingredient review fixture at 390 px, the first ingredient now
+starts about 543 px down, versus about 1,440 px in the original review. This is a
+layout measurement, not a measured improvement in task completion time. Final
+screenshots are under `TestResults/uiux-implementation/`: `final-library-desktop.png`,
+`final-library-phone-dark.png`, `final-editor-desktop.png`, `final-editor-320.png`,
+`final-tasting-desktop.png`, `final-tasting-phone-dark.png`,
+`final-comparison-desktop.png`, `final-history-dark.png`, and
+`final-kitchen-desktop.png`.
+
+Screenshot fixtures include reference artwork rather than production
+food photography. This is not a screen-reader audit, physical-device/virtual-
+keyboard test, or proof of faster human task completion.
+
+The final manual pass recorded no uncaught browser exceptions or application
+warning/error log entries. The owned Aspire AppHost and browser were stopped.
+Documentation review covered root instructions, setup/build/test guidance, and
+the existing feature/QA documents. Setup and durable agent rules remain accurate;
+feature behavior, browser-test scope, and evidence were updated in their existing
+locations.
+
 The separate [exploratory kitchen workflow log](workflow-qa.md) retains the initial
 browser observations, reproduction steps, and screenshots, plus the October 3
 follow-up fixes and their regression coverage. Its second exploratory pass on

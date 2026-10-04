@@ -52,7 +52,7 @@ public sealed partial class NotebookWorkflowTests
             await page.GetByRole(AriaRole.Link, new() { Name = "Edit draft", Exact = true }).ClickAsync();
             await page.Locator($"[data-renderer={renderer}]").WaitForAsync(new() { Timeout = 60000 });
             await page.GetByRole(AriaRole.Link, new() { Name = "← Version details", Exact = true }).ClickAsync();
-            await InteractiveButton(page, "Try a variation").ClickAsync();
+            await ClickButtonAsync(page, "Try a variation");
             await page.Locator($"[data-renderer={renderer}]").WaitForAsync();
             await VerifyUnsavedDraftDeletionAsync(page, artifacts);
             (await page.Locator(".version-timeline > li").CountAsync()).ShouldBe(1);
@@ -61,14 +61,18 @@ public sealed partial class NotebookWorkflowTests
             (await page.GetByText("Delete draft", new() { Exact = true }).CountAsync()).ShouldBe(0);
             (await page.Locator(".recipe-sheet").InnerTextAsync()).ShouldContain("Heavy cream");
             // Also delete from version details, independently of the editor guard.
-            await InteractiveButton(page, "Try a variation").ClickAsync();
+            await ClickButtonAsync(page, "Try a variation");
             await InteractiveButton(page, "Save draft").WaitForAsync();
             await page.GetByRole(AriaRole.Link, new() { Name = "← Version details", Exact = true }).ClickAsync();
             // Both pages offer Delete draft. Wait for details content so a click
             // cannot target the outgoing editor during enhanced navigation.
-            await page.GetByRole(AriaRole.Heading, new() { Name = "New experiment", Exact = true }).WaitForAsync();
-            await InteractiveButton(page, "Delete draft").ClickAsync();
-            await InteractiveButton(page, "Delete permanently").ClickAsync();
+            var versionActions = page.Locator(".version-actions");
+            await versionActions.WaitForAsync();
+            var deleteDraft = versionActions.Locator("fluent-button:not([disabled])").Filter(new() { HasText = "Delete draft" });
+            await deleteDraft.WaitForAsync(new() { State = WaitForSelectorState.Attached });
+            await versionActions.GetByText("More recipe actions", new() { Exact = true }).ClickAsync();
+            await deleteDraft.ClickAsync();
+            await versionActions.Locator("fluent-button:not([disabled])").Filter(new() { HasText = "Delete permanently" }).ClickAsync();
             await page.Locator(".version-timeline").WaitForAsync();
             (await page.Locator(".version-timeline > li").CountAsync()).ShouldBe(1);
             await page.GetByRole(AriaRole.Link, new() { Name = "← Recipe library", Exact = true }).ClickAsync();
@@ -85,17 +89,17 @@ public sealed partial class NotebookWorkflowTests
 
     private static async Task VerifyUnsavedDraftDeletionAsync(IPage page, string artifacts)
     {
-        await Field(page, "Recipe notes").FillAsync("An idea I decided not to pursue.");
-        await InteractiveButton(page, "Delete draft").ClickAsync();
+        await FillFieldAsync(page, "Recipe notes", "An idea I decided not to pursue.");
+        await ClickButtonAsync(page, "Delete draft");
         await page.GetByText("The recipe's other versions and recorded results will stay in your notebook.", new() { Exact = true }).WaitForAsync();
-        await InteractiveButton(page, "Keep draft").ClickAsync();
-        (await Field(page, "Recipe notes").InputValueAsync()).ShouldBe("An idea I decided not to pursue.");
-        await InteractiveButton(page, "Delete draft").ClickAsync();
+        await ClickButtonAsync(page, "Keep draft");
+        (await ReadFieldAsync(page, "Recipe notes")).ShouldBe("An idea I decided not to pursue.");
+        await ClickButtonAsync(page, "Delete draft");
         await page.ScreenshotAsync(new() { Path = Path.Combine(artifacts, "confirmation.png"), FullPage = true });
         (await page.EvaluateAsync<bool>("document.documentElement.scrollWidth <= innerWidth")).ShouldBeTrue();
         // No dialog handler: a stale unsaved-edits guard would be dismissed and
         // prevent navigation, failing the history assertion below.
-        await InteractiveButton(page, "Delete permanently").ClickAsync();
+        await ClickButtonAsync(page, "Delete permanently");
         await page.Locator(".version-timeline").WaitForAsync();
     }
 
@@ -103,9 +107,9 @@ public sealed partial class NotebookWorkflowTests
     {
         await page.GetByRole(AriaRole.Link, new() { Name = "+ New recipe", Exact = true }).ClickAsync();
         await InteractiveButton(page, "Create recipe & first version").WaitForAsync();
-        await Field(page, "Recipe name").FillAsync("Abandoned first idea");
-        await InteractiveButton(page, "Create recipe & first version").ClickAsync();
-        await InteractiveButton(page, "Delete draft").WaitForAsync();
+        await FillFieldAsync(page, "Recipe name", "Abandoned first idea");
+        await ClickButtonAsync(page, "Create recipe & first version");
+        await RevealAsync(page, InteractiveButton(page, "Delete draft"));
         var draft = page.Url.Replace("/edit", "", StringComparison.Ordinal);
         var api = new Uri(draft).AbsolutePath;
         await using var rejected = await page.Context.APIRequest.DeleteAsync($"/api/notebook{api}/", new()
@@ -114,9 +118,9 @@ public sealed partial class NotebookWorkflowTests
         });
         rejected.Status.ShouldBe(400); // No antiforgery token: must not delete.
         await page.ReloadAsync();
-        await InteractiveButton(page, "Delete draft").ClickAsync();
+        await ClickButtonAsync(page, "Delete draft");
         await page.GetByText("This is the recipe's only version, so the recipe will also be removed from your library.", new() { Exact = true }).WaitForAsync();
-        await InteractiveButton(page, "Delete permanently").ClickAsync();
+        await ClickButtonAsync(page, "Delete permanently");
         await page.GetByRole(AriaRole.Heading, new() { Name = "Your recipes", Exact = true }).WaitForAsync();
         (await page.Locator(".recipe-card").CountAsync()).ShouldBe(1);
         (await page.Locator(".recipe-card").InnerTextAsync()).ShouldContain("Brown butter vanilla");

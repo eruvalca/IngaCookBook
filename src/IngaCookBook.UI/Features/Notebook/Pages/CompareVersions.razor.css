@@ -1,4 +1,7 @@
 .comparison-photo { width: 100%; max-height: 24rem; object-fit: contain; border-radius: var(--borderRadiusLarge); margin-bottom: var(--spacingVerticalM); }
+.comparison-overview { padding: clamp(1.25rem, 3vw, 2rem); border-radius: var(--borderRadiusXLarge); background: var(--colorPaletteGreenBackground1); margin-block: var(--spacingVerticalL); }
+.comparison-overview .muted { margin-top: var(--spacingVerticalL); margin-bottom: 0; }
+.comparison-selectors { margin-block: var(--spacingVerticalL); }
 form p { margin-block: var(--spacingVerticalL) 0; }
 table { min-width: 0; table-layout: fixed; }
 .quality-scores th:first-child { width: 40%; }

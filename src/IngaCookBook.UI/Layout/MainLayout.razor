@@ -1,6 +1,6 @@
 @inherits LayoutComponentBase
 
-<a class="skip-link" href="#main-content" data-enhance-nav="false">Skip to content</a>
+<a class="skip-link" href="@MainContentUrl" data-enhance-nav="false">Skip to content</a>
 
 <div class="page">
     <FluentLayout Id="app-layout" Class="app-layout" GlobalScrollbar="true" Height="auto">
@@ -10,7 +10,7 @@
                     <div class="menu-toggle">
                         <FluentLayoutHamburger Id="site-menu" PanelHeader="IngaCookBook" />
                     </div>
-                    <a class="site-name" href="/">IngaCookBook</a>
+                    <a class="site-name" href="/" aria-label="IngaCookBook">Inga’s <span>recipe notebook</span></a>
                     <span class="site-tagline">A little better, every batch.</span>
                 </FluentStack>
             </header>

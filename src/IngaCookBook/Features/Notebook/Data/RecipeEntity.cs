@@ -7,6 +7,7 @@ internal sealed class RecipeEntity
     public Guid Revision { get; set; }
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
+    public Guid? CoverPhotoId { get; set; }
     public Guid? StandardVersionId { get; set; }
     public Guid? OriginRecipeId { get; set; }
     public Guid? OriginVersionId { get; set; }

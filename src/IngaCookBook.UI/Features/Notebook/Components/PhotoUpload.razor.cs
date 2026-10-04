@@ -11,13 +11,19 @@ public sealed partial class PhotoUpload
     [Parameter, EditorRequired] public Guid VersionId { get; set; }
     private readonly string _inputId = $"photo-{Guid.NewGuid():N}";
     private int _uploaded;
+    private int _total;
+    private string _uploadingName = "";
 
     [SuppressMessage("Security", "S5693:Limit the content length of HTTP requests", Justification = "Recipe photos have an explicit 10 MiB cap in both the browser stream and authenticated server handler.")]
     private Task UploadAsync(InputFileChangeEventArgs args) => RunAsync(async () =>
     {
         _uploaded = 0;
-        foreach (var file in args.GetMultipleFiles(int.MaxValue))
+        var files = args.GetMultipleFiles(int.MaxValue);
+        _total = files.Count;
+        foreach (var file in files)
         {
+            _uploadingName = file.Name;
+            StateHasChanged();
             if (file.Size > 10 * 1024 * 1024)
             {
                 Error = $"{file.Name} is larger than 10 MB. {_uploaded} photos have already been saved.";

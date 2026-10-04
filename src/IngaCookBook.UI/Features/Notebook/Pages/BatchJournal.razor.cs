@@ -54,6 +54,8 @@ public sealed partial class BatchJournal : IAsyncDisposable
         ResetEvaluation();
         await ReloadAsync();
         _scores = _recipe?.Metrics.Select(m => new ScoreInput { Id = m.Id, Name = m.Name }).ToList() ?? [];
+        View = string.Equals(Mode, "make", StringComparison.Ordinal) || _version?.Batches.Count == 0 ? "batch" : "taste";
+        _receipt = null;
     });
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -91,6 +93,11 @@ public sealed partial class BatchJournal : IAsyncDisposable
             _focusBatch = false;
             await _batchHeading.FocusAsync();
         }
+        if (_focusReceipt)
+        {
+            _focusReceipt = false;
+            await _receiptHeading.FocusAsync();
+        }
     }
 
     private async Task ReloadAsync()
@@ -99,7 +106,7 @@ public sealed partial class BatchJournal : IAsyncDisposable
         _version = _recipe?.Versions.FirstOrDefault(v => v.Id == VersionId);
         if (string.IsNullOrEmpty(_batchId) && _version?.Batches.Count > 0)
         {
-            _batchId = _version.Batches[^1].Id.ToString();
+            _batchId = (_version.Batches.LastOrDefault(b => b.Evaluations.Count == 0) ?? _version.Batches[^1]).Id.ToString();
         }
     }
 
@@ -112,6 +119,8 @@ public sealed partial class BatchJournal : IAsyncDisposable
             : await Notebook.MakeBatchAsync(RecipeId, VersionId, request);
         if (Saved(result) && result is ChangeSaved saved)
         {
+            var wasCorrection = _correctingBatchId is not null;
+            var recordedNotes = _batchNotes;
             if (_correctingBatchId is not null)
             {
                 ResetBatchCorrection();
@@ -125,6 +134,11 @@ public sealed partial class BatchJournal : IAsyncDisposable
             _savedBatch = BatchState;
             _savedRevision++;
             await ReloadAsync();
+            if (!wasCorrection)
+            {
+                _receipt = new BatchReceipt(saved.Id, (_version?.Batches.ToList().FindIndex(b => b.Id == saved.Id) ?? -1) + 1, request.MadeAt, recordedNotes);
+                _focusReceipt = true;
+            }
         }
     });
 
@@ -141,16 +155,20 @@ public sealed partial class BatchJournal : IAsyncDisposable
         var result = _correctingId is { } evaluationId
             ? await Notebook.CorrectEvaluationAsync(RecipeId, VersionId, batchId, evaluationId, new(request, _correctionReason))
             : await Notebook.EvaluateAsync(RecipeId, VersionId, batchId, request);
-        if (Saved(result))
+        if (Saved(result) && result is ChangeSaved saved)
         {
+            _receipt = new TastingReceipt(saved.Id, (_version?.Batches.ToList().FindIndex(b => b.Id == batchId) ?? -1) + 1, request.TastedAt, request.Notes, request.NextIdea, request.Scores);
             ResetEvaluation();
             await ReloadAsync();
+            _focusReceipt = true;
         }
     });
 
     private async Task CorrectAsync(Guid batchId, BatchEvaluation evaluation)
     {
         if (EvaluationDirty && _navigationInterop is not null && !await _navigationInterop.ConfirmDiscardAsync()) { return; }
+        View = "taste";
+        _receipt = null;
         _correctingId = evaluation.Id;
         _batchId = batchId.ToString();
         _tastedDate = evaluation.TastedAt.Date;

@@ -25,7 +25,8 @@ public sealed partial class NotebookFormSaveTests
         var reload = new TaskCompletionSource<RecipeDocument?>(TaskCreationOptions.RunContinuationsAsynchronously);
         service.SaveVersionAsync(recipe.Id, recipe.Versions[0].Id, Arg.Any<VersionRequest>(), Arg.Any<CancellationToken>()).Returns(pending.Task);
         var component = context.Render<VersionEditor>(p => p.Add(c => c.RecipeId, recipe.Id).Add(c => c.VersionId, recipe.Versions[0].Id));
-        await component.Find("fluent-text-input").ChangeAsync(new ChangeEventArgs { Value = "Precise formulation" });
+        var label = component.FindComponents<FluentTextInput>().Single(c => string.Equals(c.Instance.Label, "Version label", StringComparison.Ordinal));
+        await label.Find("fluent-text-input").ChangeAsync(new ChangeEventArgs { Value = "Precise formulation" });
         service.GetRecipeAsync(recipe.Id, Arg.Any<CancellationToken>()).Returns(reload.Task);
         var save = component.FindAll("fluent-button").Single(b => b.TextContent.Contains("Save draft", StringComparison.Ordinal)).ClickAsync();
         await component.WaitForAssertionAsync(() => InputsAreDisabled(component, true));
@@ -40,7 +41,7 @@ public sealed partial class NotebookFormSaveTests
         }
         await save;
         InputsAreDisabled(component, false);
-        component.Find("fluent-text-input").GetAttribute("value").ShouldBe("Precise formulation");
+        label.Instance.Value.ShouldBe("Precise formulation");
         component.Markup.ShouldContain(succeeds ? "All changes saved" : "Try again");
     }
 

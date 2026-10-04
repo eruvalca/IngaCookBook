@@ -1,0 +1,32 @@
+<div class="kitchen-sheet">
+    <p class="muted">Check off ingredients and steps as you go. These checkmarks last only while this page is open; your recipe stays unchanged.</p>
+    <FluentStack Wrap="true" HorizontalAlignment="HorizontalAlignment.SpaceBetween" VerticalAlignment="VerticalAlignment.Center">
+        <p role="status">@_completed.Count of @(Content.Ingredients.Count + Content.Steps.Count) checked</p>
+        <FluentButton Disabled="@(!RendererInfo.IsInteractive)" OnClick="Reset">Reset checkmarks</FluentButton>
+    </FluentStack>
+    <FluentGrid Spacing="6">
+        <FluentGridItem Xs="12" Md="5"><section class="notebook-panel"><h2>Ingredients</h2>
+            @foreach (var ingredient in Content.Ingredients)
+            {
+                <div class="kitchen-check" data-complete="@_completed.Contains(ingredient.Id).ToString().ToLowerInvariant()" @key="ingredient.Id">
+                    <FluentCheckbox Disabled="@(!RendererInfo.IsInteractive)" Value="@_completed.Contains(ingredient.Id)" ValueChanged="@(value => Toggle(ingredient.Id, value))" Label="@($"{ingredient.Quantity} {ingredient.Unit} · {ingredient.Name}")" />
+                    @if (ingredient.LinkedContent is not null) { <details><summary>Included recipe: @ingredient.LinkedContent.Label</summary><RecipeSheet Content="ingredient.LinkedContent" /></details> }
+                </div>
+            }
+        </section></FluentGridItem>
+        <FluentGridItem Xs="12" Md="7"><section class="notebook-panel"><h2>Preparation</h2>
+            @foreach (var step in Content.Steps)
+            {
+                <div class="kitchen-check" data-complete="@_completed.Contains(step.Id).ToString().ToLowerInvariant()" @key="step.Id">
+                    <FluentCheckbox Disabled="@(!RendererInfo.IsInteractive)" Value="@_completed.Contains(step.Id)" ValueChanged="@(value => Toggle(step.Id, value))" Label="@($"Step {Content.Steps.ToList().IndexOf(step) + 1} · {step.Instruction}")" />
+                    @if (!string.IsNullOrWhiteSpace(step.Notes)) { <p class="muted preserve-lines">@step.Notes</p> }
+                </div>
+            }
+        </section></FluentGridItem>
+    </FluentGrid>
+    @if (!string.IsNullOrWhiteSpace(Content.Notes))
+    {
+        <section class="notebook-panel"><h2>Recipe notes</h2><p class="preserve-lines">@Content.Notes</p></section>
+    }
+</div>
+<FluentProviders />

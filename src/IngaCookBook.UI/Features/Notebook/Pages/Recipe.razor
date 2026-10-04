@@ -18,10 +18,10 @@
     }
     @if (recipe.Versions.FirstOrDefault(v => v.Id == recipe.StandardVersionId) is { } standard)
     {
-        <section class="standard-banner"><span class="eyebrow">YOUR CURRENT STANDARD</span><h2>V@(standard.Number) · @standard.Content.Label</h2><p>The version you want to make again.</p><a class="action-link primary" href="@VersionUrl(standard)">Open standard</a></section>
+        <section class="standard-banner"><span class="eyebrow">YOUR CURRENT STANDARD</span><h2>V@(standard.Number) · @standard.Content.Label</h2><p>The version you want to make again.</p><a class="action-link primary" href="@(VersionUrl(standard) + "/batches?mode=make")">Make a batch</a> <a class="action-link" href="@VersionUrl(standard)">Open standard</a></section>
     }
     <FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" Wrap="true" VerticalAlignment="VerticalAlignment.Center">
-        <div><h2>The story so far</h2><p class="muted">@recipe.Versions.Count versions · @recipe.Versions.Sum(v => v.Batches.Count) batches. Every experiment teaches you something.</p></div>
+        <div><h2>The story so far</h2><p class="muted">@recipe.Versions.Count @(recipe.Versions.Count == 1 ? "version" : "versions") · @recipe.Versions.Sum(v => v.Batches.Count) @(recipe.Versions.Sum(v => v.Batches.Count) == 1 ? "batch" : "batches"). Every experiment teaches you something.</p></div>
         <FluentStack Width="auto" Wrap="true" HorizontalGap="var(--spacingHorizontalM)">
             <a href="@($"/recipes/{recipe.Id}/compare")">Compare versions</a>
             <a href="@($"/recipes/{recipe.Id}?view={(Branches ? "timeline" : "branches")}")">@(Branches ? "Timeline view" : "Branching view")</a>
@@ -45,15 +45,14 @@
                 var changes = parent is null ? [] : RecipeComparison.Compare(parent.Content, version.Content);
                 <li @key="version.Id">
                     <article class="notebook-panel">
-                        <span class="badge">@(version.IsLocked ? "Preserved" : "Draft")</span>
+                        <span class="badge">@(version.IsLocked ? "Preserved" : "Untested draft")</span>
                         @if (recipe.StandardVersionId == version.Id) { <span class="badge standard">Current standard</span> }
                         <h3><a href="@VersionUrl(version)">V@(version.Number) · @version.Content.Label</a></h3>
                         <p class="muted"><LocalDate Value="version.CreatedAt" /> · @(parent is null ? "The starting point" : $"From V{parent.Number}")</p>
                         @if (!string.IsNullOrWhiteSpace(version.Content.Hypothesis)) { <p>@version.Content.Hypothesis</p> }
                         @if (changes.Count > 0)
                         {
-                            <ul class="change-summary">@foreach (var change in changes.Take(4)) { <li><strong>@change.Label</strong>: @change.Before → @change.After</li> }</ul>
-                            @if (changes.Count > 4) { <p>@(changes.Count - 4) more changes</p> }
+                            <ChangeSummary Changes="changes" Limit="3" />
                         }
                         @if (RecipeComparison.LatestEvaluation(version) is { } evaluation)
                         {
@@ -63,11 +62,12 @@
                                 @foreach (var metric in recipe.Metrics)
                                 {
                                     var score = evaluation.Scores.FirstOrDefault(s => s.MetricId == metric.Id);
-                                    <span class="score-chip">@metric.Name <strong>@(score?.Score?.ToString() ?? "—")</strong></span>
+                                    @if (score?.Score is not null) { <span class="score-chip">@metric.Name <strong>@score.Score</strong></span> }
                                 }
                             </FluentStack>
                         }
                         else { <p class="muted">No tastings recorded yet.</p> }
+                        <a class="action-link" href="@(VersionUrl(version) + (version.IsLocked ? "/batches?mode=taste" : "/edit"))">@(version.IsLocked ? "Add a tasting" : "Continue editing")</a>
                     </article>
                 </li>
             }

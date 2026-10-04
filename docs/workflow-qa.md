@@ -1,5 +1,292 @@
 # Exploratory kitchen workflow QA
 
+## Section-link follow-up
+
+- **Add photos** used `#photos`, which resolved against the app's root base URL.
+  For signed-in users the root redirected to the library. The link now includes
+  the current version route and reaches its uploader.
+- **Experiment plan** had the same problem. Its URL now retains the editor path
+  and query string, so moving to the plan preserves unsaved inputs and idea context.
+- **Skip to content** now focuses the current main region without leaving the
+  page, including after interactive routing; SSR retains a page-qualified fallback.
+- **Choose a cover or edit captions** now opens the settings photo section. That
+  destination also exists before the first upload, with an explanatory empty state.
+
+Browser regression evidence and the checked destination links are recorded in
+[validation.md](validation.md#section-link-validation).
+
+## UI/UX implementation follow-up — October 4, 2026
+
+The approved design is implemented with Fluent UI and the existing static SSR /
+InteractiveAuto boundaries. The original review below remains the baseline.
+
+- UX1: the editor measures the save bar, reserves document scroll clearance,
+  and brings focused fields above it, including when actions wrap.
+- UX2: an empty recipe name gets an in-place, announced error and field focus.
+  Server validation remains intact.
+- UX3: library totals no longer precede the work; card counts use singular and
+  plural labels.
+- UX4: print media removes the heading focus outline; screen focus stays visible.
+- Ingredients lead the editor. The experiment coach and optional metadata are
+  secondary, with multi-change guidance expanded when needed.
+- Batch recording, tasting, and recorded history have separate views. Numbered
+  score choices support notes, clearing, numeric entry, and unassessed values.
+  Switching tasks retains unfinished forms.
+- Save receipts show the recorded batch/tasting. A next idea starts an editable
+  variation without changing the original tasting or silently saving the question.
+- The library resumes drafts and filters work by status. History and comparison
+  emphasize changes and assessed qualities. Kitchen view offers local checkmarks
+  without changing the saved formulation.
+- Photos show upload progress. Settings provide cover selection and caption
+  editing beside previews. A nullable cover field was generated through the
+  Aspire EF migration resource; development data was not reset.
+- Coral actions, green standards/completion states, ivory or dark green surfaces,
+  serif headings, and larger controls carry the visual direction across the app.
+- The final narrow-screen pass found Fluent's internal 160 px dropdown minimum
+  overflowing the editor's quantity/unit columns at 320 px. The editor uses the
+  supported control-style parameter to remove that minimum, and shared fields
+  constrain their grid tracks. A browser regression checks the document width.
+- Kitchen checkboxes retain square 44 px targets, readable labels, and a visible
+  strike-through when completed; checkmarks remain local to the open page.
+
+Validation is recorded in [validation.md](validation.md). Local evidence is under
+ignored `TestResults/uiux-implementation/`. Improvements in human task speed and
+ease of use still need observation with the cook; tests and screenshots cannot
+establish those outcomes.
+
+### Code-review follow-up
+
+- Kitchen view now includes saved recipe-level notes with their original line
+  breaks. Empty notes do not create an empty section. This restores instructions
+  that were visible on the regular recipe sheet but absent from the cooking view.
+- The browser deletion workflow now waits for the details-only `.version-actions`
+  area and scopes both deletion clicks to it. The shared recipe-name heading can
+  no longer let the test interact with an outgoing editor during navigation.
+
+## Comprehensive UI/UX review — October 3, 2026
+
+**Reviewed application:** `21f20bb` on `main`. This original design review predates
+the implementation follow-up above. Earlier resolved
+findings later in this document retain their original context.
+
+### Assessment and direction
+
+The notebook already models the difficult parts of recipe development well:
+versions, repeat batches, separate tastings, standards, and recorded corrections.
+The main usability opportunity is deciding what deserves attention at each
+moment. Introductions, totals, administration, optional notes, and primary work
+currently occupy similarly prominent panels. The result feels more like filling
+out forms than developing a recipe.
+
+Recommended direction: **a warm, editorial recipe notebook with a quiet experiment
+coach**. Use Inga's coral, leaf green, and ivory more deliberately; give the recipe
+name, ingredients, and next useful action priority. The most valuable improvement
+is less effort between an intention and a recorded result, supported by more
+distinctive typography and composition.
+
+Keep the existing rendering boundaries, Fluent UI, explicit saves, precise units,
+recipe-wide criteria, optional scores/notes, and user-selected standards. Do not
+add inventory, nutrition, sharing, scaling, or mandatory AI features to achieve
+this direction. Do not infer causation or choose a winner from tasting scores.
+
+### Browser scope and observations
+
+Manual exploration used the Playwright Chromium library against the actual Aspire
+application, PostgreSQL, and Azurite. Viewports: desktop 1440 × 900, phone
+390 × 844, tablet 768 × 1024, and a 320-pixel comparison reflow check. Light and
+dark appearances, keyboard navigation, accessibility-tree inspection, and print
+media were included. System appearance was visible as an option; system-preference
+switching was not repeated in this pass.
+
+| Journey | Observed result and design implication |
+| --- | --- |
+| Home, registration, sign-in, workspace, account | Reviewed the screens and signed into the existing synthetic QA owner. The signed-in Home still presents the promotional introduction and another action to open the notebook. Account navigation is now concise. Registration and workspace creation were not resubmitted. |
+| Find and resume a recipe | Library search, recipe cards, and standards are understandable. Totals occupy valuable space before recipes; the first phone card started about 454 px down. A recent draft or unfinished tasting has no direct resume action on its card. |
+| Timeline and branching | Viewed the three-version Horchata history and branch view. Parentage is available. Repeated ingredient names and blank-score chips make individual experiments harder to scan. |
+| Version details | Ingredients and preparation are readable. The make/taste action appears below costs, photos, and batch history, while trying a variation is prominent near the top. |
+| Edit a variation | Examined four ingredients, three steps, and the existing experiment question. At 390 px wide, the first ingredient began around 1,440 px down; the page was about 4,164 px tall. The experiment panel precedes the ingredients on narrow screens. |
+| Create and record a fresh recipe | Created `UI review · Cinnamon cream`, used the five ice-cream starter criteria, entered milk and a preparation step, saved, recorded a batch, and saved five scores plus a next idea. All persisted after reload. Empty-name validation was also exercised. |
+| Taste a batch | With five criteria, the phone Save evaluation action began around 2,409 px down. With ten criteria it began around 3,564 px down. Each criterion permanently displays an optional note area, and the batch form precedes the tasting form on phones. |
+| Finish a tasting | The saved entry contained the entered scores and next idea. The page returned to empty entry forms with a generic success notice; the meaningful result remained below them. |
+| Compare versions and results | Reviewed V1/V2 ingredients, selected-tasting context, notes, score changes, and photos. No document-width overflow at 320 or 390 px. The full phone comparison still occupied roughly 3,800 px. The ingredient table already shows differences only; the proposed improvement is a concise overview, less repetitive text, and collapsing empty context/unassessed criteria. |
+| Settings, photos, and print | Inspected ten-criterion settings and existing version photos; the library image decoded successfully. Printed recipe content and shell removal were correct, but heading focus decoration remained in print media. Uploads and destructive metric edits were not repeated. |
+
+Measurements are CSS-pixel positions from the top of the document for these
+fixtures, not universal page lengths or measured human task-completion times.
+The existing photo fixtures include the business logo and a screenshot; they do
+not establish the visual quality of a real food-photo library.
+
+### Confirmed issues to resolve first
+
+| ID / priority | Evidence and impact | Location and proposed remedy |
+| --- | --- | --- |
+| UX1 / high | On the 390 × 844 editor, keyboard Tab moved to an ingredient-name input at y=790.5–820.5 while the sticky save bar occupied y=778–844. The entire focused input was hidden. | `src/IngaCookBook.UI/Features/Notebook/Pages/VersionEditor.razor.css:5`. Reserve clearance for the actual toolbar height, including wrapping and safe areas; use document scroll padding/appropriate scroll margins and verify focus visibility in both directions. Keep document scrolling. Evidence: `17-focused-input-obscured.png`. |
+| UX2 / high | Submitting a blank recipe name showed one combined name/description error above the long form. Focus ended on the document body, without identifying/focusing the recipe-name field. Inputs were retained and the alert was announced, but recovery required locating the problem manually. | `src/IngaCookBook.UI/Features/Notebook/Pages/NewRecipe.razor:12` and `NewRecipe.razor.cs:31`. Add field-specific errors associated with their inputs, focus the first invalid field on submission, and retain a concise linked summary for multiple errors. Evidence: `22-new-recipe-error.png`. |
+| UX3 / low | Library totals use 32 px text with an inherited 20 px line height. Numerals crowd their labels in both themes. Cards also show singular counts as “1 versions” and “1 batches.” | `src/IngaCookBook.UI/Features/Notebook/Pages/Library.razor.css:13` and `Library.razor:53`. Give display numerals an explicit suitable line height and pluralize counts. If totals are moved to a secondary location, retain this correction there. Evidence: `03-library-desktop.png`, `27-library-phone-dark-closed.png`. |
+| UX4 / low | Navigating directly to the print page focuses its heading. Under print media the heading still has the global coral 2 px outline, so printing immediately through the browser can decorate the recipe with a focus box. | `src/IngaCookBook/wwwroot/app.css:82` and `app.css:133`. Remove interactive focus decoration in print media only; retain visible keyboard focus on screen. Evidence: `29-print-focused-heading.png` and `print-focus-check.pdf`. No physical printer was tested. |
+
+UX1 is the kind of author-created sticky-content obstruction addressed by
+[WCAG 2.4.11, Focus Not Obscured](https://www.w3.org/WAI/WCAG22/Understanding/focus-not-obscured-minimum.html).
+This observation is not a complete accessibility-conformance assessment.
+
+### Workflow improvements, in recommended order
+
+1. **Make the editor start with the recipe.** Put the actual recipe name and
+   version label above ingredients. On phones, reduce the coach to a short
+   “Focus: Scoopability · 1 change” disclosure and put it after, or alongside,
+   the active work. Expand relevant guidance when multiple changes need an
+   explanation. Keep a fuller side panel on desktops. Use compact ingredient
+   rows, with purchase costs and linked recipes available on demand. Baseline
+   entry does not need the same prominence of experiment guidance as a variation.
+   Locations: `VersionEditor.razor:24`, `VersionEditor.razor:64`.
+2. **Give tasting its own focused view.** Separate recording a batch from scoring
+   one. Show the selected version, batch, and date once, then provide discrete
+   1–10 choices and expandable notes. On phones use two rows of five sufficiently
+   large choices rather than ten tiny controls. Support keyboard operation,
+   clearing a score, and genuinely unassessed values. A compact overview should
+   remain the default; a one-criterion-at-a-time mode could be optional, not ten
+   mandatory screens. Location: `BatchJournal.razor:14` and `:48`.
+3. **Let successful saves feel complete.** Show the saved tasting summary and
+   next idea immediately, with “Done” and “Try this as a variation.” Carry the
+   idea into a new draft as an editable question; preserve the original tasting.
+   Batch recording should offer “Taste now” or “Later.” Keep explicit saving and
+   clear unsaved/saving/saved states. Location: `BatchJournal.razor:10`,
+   `NotebookPage.cs:40`. This does not require confetti or decorative animation.
+4. **Make the next useful action obvious.** A draft needs “Continue editing”; a
+   standard needs “Make a batch”; a batch needs “Add a tasting.” Keep trying
+   alternatives available without giving it priority during ordinary cooking.
+   Put deletion, historical correction, and promotion in a clearly labeled
+   secondary action area, retaining their safeguards. Locations:
+   `VersionDetails.razor:18`, `:59`, `Components/VersionActions.razor`.
+5. **Turn the library into a working notebook.** Land signed-in users here, with
+   a recent-work section, direct resume actions, search, and modest status
+   filters. Move the large totals below the work or remove them. Use an intentional
+   compact fallback when there is no photo; let a real recipe photo be the cover
+   when available. Keep card links and secondary actions semantically separate.
+   Locations: `Features/Home/Pages/Home.razor:10`, `Library.razor:18`, `:39`.
+6. **Make comparison answer the question quickly.** Lead with the changed
+   ingredient/step, then the relevant recorded score changes: “Cream 240 → 260 g;
+   scoopability 6 → 8.” Retain both selected tasting identities/dates. Hide
+   unassessed criteria and empty context behind an explicit disclosure. Keep all
+   precision, notes, changes, and photos available. Use text and simple aligned
+   comparisons rather than a decorative radar chart or invented overall score.
+   Location: `CompareVersions.razor:24`, `:34`, `:51`.
+7. **Make history read like experiments.** Give each entry a short question,
+   parent version, date, compact change summary, and the few relevant scored
+   outcomes. Replace repeated full ingredient names with the changed values.
+   Label untested drafts clearly and give the current standard a distinctive
+   green marker. Keep the branch view as an optional explanation of lineage.
+   Location: `Recipe.razor:42–69`.
+8. **Reduce first-use paperwork.** Start with a name and a suggested, editable
+   evaluation preset; let the cook get to ingredients immediately. Explain that
+   criteria can be adjusted later. Do not quietly discard custom criteria when
+   changing a preset. Workspace setup should use plain “Your kitchen” language
+   while preserving the tenant model. Location: `NewRecipe.razor:15`.
+9. **Improve kitchen ergonomics.** Aim for 16 px body/entry text and 44–48 px
+   common action targets, with comfortable spacing and visible focus. Shorten
+   repeated introductions rather than shrinking everything. Those target sizes
+   are a comfort recommendation, not a claim that WCAG AA requires 44 px;
+   [WCAG's minimum criterion](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)
+   uses 24 CSS px with exceptions. Locations: `app.css:50–58`, shared Fluent
+   sizing, and `Layout/MainLayout.razor.css`.
+10. **Make photos purposeful.** Place a restrained “Add photos” action near
+    the recipe, with clear upload progress and successful/failed-file feedback.
+    Favor a chosen cover and texture/detail captions over a permanent large
+    empty photo panel. Preserve version ownership of images. Locations:
+    `VersionDetails.razor:34`, `Components/PhotoUpload.razor`.
+
+### Visual design and distinctive ideas
+
+- **Typography with a clear hierarchy:** carry the warm serif character of the
+  landing page into recipe names and section headings. Pair it with readable
+  Fluent body text and tabular quantities. Make actual recipe context more
+  prominent than generic headings such as “Shape your next discovery.”
+- **Color with a purpose:** coral for the primary action and experimentation;
+  leaf green for standards and recorded positive outcomes; ivory for quiet
+  working space. Use a deeper coral for small text on light backgrounds and a
+  lighter coral on dark surfaces. Never rely on color alone for status or deltas.
+  Keep system/light/dark behavior. Avoid large decorative color blocks that push
+  useful information away.
+- **Fewer competing boxes:** one recipe sheet with grouped content, restrained
+  dividers, and a smaller contextual coach. Costs, audits, and optional context
+  should remain easy to find without becoming equal-sized primary panels.
+- **An experiment receipt:** after a save, a compact factual record of the
+  question, exact changes, selected batch/tasting, and the cook's observation.
+  This could become the readable unit of history. Group related edits in the
+  presentation without hiding the actual changes or silently bypassing the
+  explanation required for multiple changes.
+- **Turn “next idea” into a useful starting point:** a single action carries that
+  text and the selected focus into a variation. The app supplies continuity;
+  the cook supplies the judgment. No AI recipe generation is necessary.
+- **A later kitchen reading mode:** large ingredients, tappable preparation
+  checkmarks, and a clear current step on a tablet. Keep the original ordered
+  instructions and quantities unchanged. Validate this with the cook before
+  adding timers or other scope. It is less urgent than fixing editor and tasting
+  friction.
+
+### Visual concept and implementation sequence
+
+An isolated local prototype is at
+`TestResults/uiux-review/inga-notebook-concept.html`. It demonstrates Recipe,
+Taste, and Compare views, coral/green light and dark treatments, discrete score
+selection, optional notes, and a saved-result preview. Its sample content is
+illustrative; it does not call the application or save data. Application
+implementation would use Fluent components and the existing SSR/InteractiveAuto
+boundaries, not copy a second UI framework into the product.
+
+1. **Correct usability defects:** UX1–UX4, then readable type and action sizing.
+   Acceptance: no focused field hidden by a toolbar at the supported sizes;
+   invalid submission identifies the exact field; print has no focus decoration.
+2. **Redesign the daily loop:** editor, make/taste separation, and completion
+   summaries. Acceptance: an ordinary mobile draft reaches ingredients in the
+   first useful screen without scrolling past the full coach; five scores can
+   be entered without opening a software keyboard or five unused note areas;
+   saved results appear immediately. Test ten-criterion and long-label cases too.
+3. **Apply the visual direction across the product:** library, version details,
+   history, comparisons, onboarding, account/settings, empty and error states.
+   Keep browser Back/Forward, enhanced navigation, static account POSTs,
+   concurrency handling, and unsaved-input protection intact.
+4. **Observe the actual cook:** ask her to resume a draft, change one ingredient,
+   record a tasting, and find the better-scoring attempt without coaching.
+   Compare time, mis-taps, uncertainty, and recovery against the existing app.
+   Treat faster task completion as something to measure, not a promised outcome
+   of this visual prototype.
+
+### Evidence, limits, and review outcome
+
+Local screenshots and the print PDF are under ignored `TestResults/uiux-review/`.
+Useful files include `07-editor-desktop.png`, `14-editor-phone.png`,
+`15-journal-phone.png`, `17-focused-input-obscured.png`,
+`20-history-desktop-dark.png`, `22-new-recipe-error.png`,
+`23-tasting-saved-desktop.png`, `24-tasting-five-metrics-phone.png`,
+`25-version-tablet.png`, `27-library-phone-dark-closed.png`,
+`28-compare-320.png`, and `29-print-focused-heading.png`.
+Concept screenshots are `concept-desktop.png`, `concept-desktop-dark.png`,
+`concept-phone-tasting.png`, and `concept-phone-compare.png`.
+
+There were **zero uncaught page exceptions observed**. A Playwright role lookup
+failed for Fluent buttons after WebAssembly activation, but Chromium's actual
+accessibility tree retained their button roles; this was not recorded as an app
+accessibility defect. Some initial screenshots caught image loading or an open
+mobile drawer; settled captures were used when evaluating those surfaces. The
+normal on-screen focus outline around a navigated heading is not itself a bug.
+
+This pass was not a screen-reader audit, physical-device or virtual-keyboard
+test, Safari/Firefox pass, production Azure test, performance benchmark, or full
+workflow regression run. Destructive operations, concurrent writes, passkeys,
+and photo upload failure paths were not re-exercised. No automated test-suite
+pass count is claimed. The added recipe/batch/tasting remains in the synthetic
+QA workspace. No application source or existing recipe was changed. The temporary
+browser session and the Aspire instance started for this review were stopped
+normally, preserving the development data.
+
+Review guidance included the
+[Web Interface Guidelines](https://github.com/vercel-labs/web-interface-guidelines/blob/main/command.md)
+and the W3C criteria linked above. AGENTS.md, README.md, build/README.md,
+tests/README.md, and the existing product/validation docs were checked. Product
+behavior and setup guidance remain accurate; only this review log and its
+validation cross-reference need updating for this task.
+
 ## Brand and layout investigation — October 3, 2026
 
 Baseline: `e8d1b31`, plus this working change set. Tested through Playwright's

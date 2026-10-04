@@ -8,11 +8,11 @@
 <SaveNotice Error="@Error" />
 @if (_workspace is not null)
 {
-    <FluentCard Class="notebook-panel"><h2>Your private workspace</h2><p>Recipes and experiments here belong to you.</p><p>Ingredient prices use @_workspace.Currency.</p><a href="/recipes" class="action-link primary">Open your recipe library</a></FluentCard>
+    <FluentCard Class="notebook-panel"><h2>Your kitchen notebook</h2><p>Recipes and experiments here belong to you.</p><p>Ingredient prices use @_workspace.Currency.</p><a href="/recipes" class="action-link primary">Open your recipe library</a></FluentCard>
 }
 else
 {
-    <p class="lede">Give your notebook a home. Your business name, your kitchen, or simply a project you love.</p>
+    <p class="lede">Give your kitchen a name. This is your private space for recipes and experiments.</p>
     <EditForm Model="Input" FormName="workspace" method="post" Enhance OnValidSubmit="CreateAsync" class="account-form notebook-panel">
         <DataAnnotationsValidator /><ValidationSummary />
         <div class="form-field"><label for="workspace-name">Workspace name</label><InputText id="workspace-name" @bind-Value="Input.Name" maxlength="120" autocomplete="organization" /></div>

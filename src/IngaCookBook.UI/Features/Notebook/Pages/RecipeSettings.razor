@@ -14,6 +14,26 @@
     <section class="notebook-panel editor-form">
         <FluentTextInput Disabled="@FormDisabled" Label="Recipe name" @bind-Value="_name" MaxLength="200" />
         <FluentTextArea Disabled="@FormDisabled" Label="About this recipe" @bind-Value="_description" MaxLength="4000" />
+        <details id="recipe-photos" open="@ShowPhotoSettings"><summary>Cover photo &amp; captions</summary>
+            @if (_photos.Count > 0)
+            {
+                <FluentSelect Disabled="@FormDisabled" TOption="PhotoOption" TValue="string" Label="Library cover photo" Items="CoverOptions" OptionText="@(p => p.Label)" OptionValue="@(p => p.Id)" @bind-Value="_coverId" />
+                <p class="muted">Choose the photo that represents this recipe. Captions describe the texture, finish, or detail in each photo.</p>
+                <FluentGrid Spacing="4">
+                @foreach (var photo in _photos)
+                {
+                    <FluentGridItem Xs="12" Sm="6" @key="photo.Id">
+                        <img class="caption-preview" src="@($"/api/notebook/recipes/{RecipeId}/versions/{photo.VersionId}/photos/{photo.Id}")" alt="@photo.Caption" loading="lazy" />
+                        <FluentTextInput Disabled="@FormDisabled" Label="@($"Caption · V{photo.VersionNumber} · Photo {_photos.IndexOf(photo) + 1}")" @bind-Value="photo.Caption" MaxLength="200" />
+                    </FluentGridItem>
+                }
+                </FluentGrid>
+            }
+            else
+            {
+                <p class="muted">No photos yet. Open a version and choose Add photos to upload your first photo.</p>
+            }
+        </details>
         <h2>What makes this recipe good?</h2><p>These criteria are shared across every version and variation. Each is scored from 1–10, where 10 is best.</p>
         @foreach (var metric in _metrics)
         {

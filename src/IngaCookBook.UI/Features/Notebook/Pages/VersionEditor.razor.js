@@ -68,6 +68,8 @@ class EditorGuard {
     #dirty = false;
     #pendingInput = false;
     #savedRevision;
+    #saveBar;
+    #saveResize;
 
     constructor(editor) {
         this.editor = editor;
@@ -75,6 +77,17 @@ class EditorGuard {
         // Protect typed input even before a server-side change event returns.
         editor.addEventListener('input', () => { this.#pendingInput = true; }, options);
         editor.addEventListener('change', () => { this.#pendingInput = true; }, options);
+        editor.addEventListener('focusin', event => {
+            const target = event.composedPath().find(node => node instanceof HTMLElement);
+            requestAnimationFrame(() => {
+                if (!target?.isConnected || !this.#saveBar || this.#saveBar.contains(target)) return;
+                const field = target.getBoundingClientRect();
+                const bar = this.#saveBar.getBoundingClientRect();
+                if (field.bottom > bar.top && bar.top < innerHeight) {
+                    window.scrollBy({ top: field.bottom - bar.top + 20, behavior: 'instant' });
+                }
+            });
+        }, options);
         document.addEventListener('click', event => {
             if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
             const link = event.composedPath().find(node => node instanceof HTMLAnchorElement);
@@ -108,12 +121,25 @@ class EditorGuard {
     }
 
     update(dirty, savedRevision) {
+        const bar = this.editor.querySelector('.save-bar');
+        if (bar !== this.#saveBar) {
+            this.#saveResize?.disconnect();
+            this.#saveBar = bar;
+            if (bar) {
+                this.#saveResize = new ResizeObserver(() => {
+                    document.documentElement.style.setProperty('--notebook-save-clearance', `${bar.getBoundingClientRect().height + 24}px`);
+                });
+                this.#saveResize.observe(bar);
+            }
+        }
         if (dirty || savedRevision !== this.#savedRevision) this.#pendingInput = false;
         this.#dirty = dirty;
         this.#savedRevision = savedRevision;
     }
 
     dispose() {
+        this.#saveResize?.disconnect();
+        document.documentElement.style.removeProperty('--notebook-save-clearance');
         this.#abort.abort();
         this.#observer.disconnect();
     }

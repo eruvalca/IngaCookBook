@@ -3,7 +3,7 @@
 @inherits NotebookPage
 
 <PageTitle>Your recipes · IngaCookBook</PageTitle>
-<p class="eyebrow">YOUR DEVELOPMENT NOTEBOOK</p>
+<p class="eyebrow">FROM YOUR KITCHEN</p>
 <FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Wrap="true">
     <div><h1>Your recipes</h1><p class="lede">Small changes. Delicious discoveries.</p></div>
     <a class="action-link primary" href="/recipes/new">+ New recipe</a>
@@ -15,15 +15,17 @@
 }
 else if (_loaded)
 {
-    <FluentGrid Spacing="4" Class="notebook-stats">
-        <FluentGridItem Xs="4"><div class="stat"><strong>@_recipes.Count</strong><span>recipes</span></div></FluentGridItem>
-        <FluentGridItem Xs="4"><div class="stat"><strong>@_recipes.Sum(r => r.Versions.Count)</strong><span>versions</span></div></FluentGridItem>
-        <FluentGridItem Xs="4"><div class="stat"><strong>@_recipes.Count(r => r.StandardVersionId is not null)</strong><span>standards</span></div></FluentGridItem>
-    </FluentGrid>
+    @if (RecentDraft is { } recent && string.IsNullOrWhiteSpace(Query) && string.IsNullOrWhiteSpace(StatusFilter))
+    {
+        <section class="resume-card"><FluentStack HorizontalAlignment="HorizontalAlignment.SpaceBetween" VerticalAlignment="VerticalAlignment.Center" Wrap="true">
+            <div><p class="eyebrow">PICK UP WHERE YOU LEFT OFF</p><h2>@recent.Recipe.Name</h2><p class="muted">Draft V@(recent.Version.Number) · @recent.Version.Content.Label</p></div>
+            <a class="action-link primary" href="@($"/recipes/{recent.Recipe.Id}/versions/{recent.Version.Id}/edit")">Continue editing</a>
+        </FluentStack></section>
+    }
     <form method="get" action="/recipes" class="library-search" role="search">
         <FluentStack VerticalAlignment="VerticalAlignment.Bottom" HorizontalGap="var(--spacingHorizontalM)" Wrap="true">
             <div class="form-field"><label for="recipe-search">Find a recipe</label><input id="recipe-search" name="q" type="search" value="@Query" placeholder="Vanilla, caramel, sourdough…" /></div>
-            <button class="native-button" type="submit">Search</button>
+            <div class="form-field"><label for="recipe-status">Show</label><select id="recipe-status" name="status"><option value="">All recipes</option><option value="drafts" selected="@(StatusFilter == "drafts")">With drafts</option><option value="tasting" selected="@(StatusFilter == "tasting")">Awaiting a tasting</option><option value="standards" selected="@(StatusFilter == "standards")">Standards</option></select></div><button class="native-button" type="submit">Search</button>
             <a href="/recipes">Clear</a>
         </FluentStack>
     </form>
@@ -36,21 +38,24 @@ else if (_loaded)
         {
             <FluentGridItem Xs="12" Sm="6" Lg="4" @key="recipe.Id">
                 <article class="recipe-card">
-                    <div class="recipe-card-cover">
+                    <div class="recipe-card-cover @(Cover(recipe) is null ? "without-photo" : "")">
                         @if (Cover(recipe) is { } cover)
                         {
                             <img src="@cover" alt="@recipe.Name" loading="lazy" />
                         }
                         else
                         {
-                            <FluentIcon Value="@(new Icons.Regular.Size48.Food())" aria-hidden="true" />
+                            <span class="eyebrow">YOUR RECIPE NOTEBOOK</span>
                         }
                     </div>
                     <div class="recipe-card-body">
-                        <span class="badge">@(recipe.StandardVersionId is null ? "In development" : "Standard selected")</span>
+                        <span class="badge @(recipe.StandardVersionId is null ? "" : "standard")">@(recipe.StandardVersionId is null ? "In development" : "Standard selected")</span>
                         <h2><a href="@($"/recipes/{recipe.Id}")">@recipe.Name</a></h2>
                         <p>@recipe.Description</p>
-                        <p class="muted">@recipe.Versions.Count versions · @recipe.Versions.Sum(v => v.Batches.Count) batches</p>
+                        <p class="muted">@Count(recipe.Versions.Count, "version") · @Count(recipe.Versions.Sum(v => v.Batches.Count), "batch")</p>
+                        @if (AwaitingTasting(recipe) is { } untasted) { <a class="action-link" href="@($"/recipes/{recipe.Id}/versions/{untasted.Id}/batches?mode=taste")">Add a tasting</a> }
+                        else if (Draft(recipe) is { } draft) { <a class="action-link" href="@($"/recipes/{recipe.Id}/versions/{draft.Id}/edit")">Continue draft</a> }
+                        else if (recipe.Versions.FirstOrDefault(v => v.Id == recipe.StandardVersionId) is { } standard) { <a class="action-link" href="@($"/recipes/{recipe.Id}/versions/{standard.Id}/batches?mode=make")">Make a batch</a> }
                     </div>
                 </article>
             </FluentGridItem>

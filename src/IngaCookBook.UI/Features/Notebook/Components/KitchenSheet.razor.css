@@ -1,0 +1,5 @@
+.kitchen-check { padding-block: var(--spacingVerticalL); border-top: 1px solid var(--colorNeutralStroke2); font-size: 1.2rem; line-height: 1.65; }
+.kitchen-check[data-complete="true"] { color: var(--colorNeutralForeground2); }
+.kitchen-check[data-complete="true"] ::deep label { text-decoration: line-through; }
+::deep fluent-checkbox { width: 44px; min-width: 44px; height: 44px; min-height: 44px; }
+::deep label { font-size: 1.125rem; line-height: 1.65; }

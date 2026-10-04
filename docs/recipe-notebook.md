@@ -8,7 +8,11 @@ evaluation criteria; no workflow depends on ice cream-specific calculations.
 ## Making an experiment
 
 1. Register, sign in, and name your workspace. Choose a currency for optional costs.
-2. Create a recipe and choose its evaluation criteria. Scores use 1–10, with 10
+2. Create a recipe with a name and an optional description. Evaluation criteria
+   start with overall satisfaction and can be expanded or edited before creating
+   it or in recipe settings later. The ice cream preset adds missing criteria
+   without replacing custom ones. An empty name is identified and focused in place.
+   Scores use 1–10, with 10
    representing the best result. Every score has an optional notes field.
    Recipe creation and settings warn before leaving unsaved names, descriptions,
    or criteria. Canceling navigation retains the form; rejected saves retain the
@@ -24,12 +28,20 @@ evaluation criteria; no workflow depends on ice cream-specific calculations.
    to the browser's local calendar date in both Server and WebAssembly rendering.
    Date-dependent forms stay disabled until that default is ready; manually chosen
    dates survive saves and reloads of the journal's data.
-5. Add a tasting to that batch: scores, notes, overall observations, and one idea
+5. Switch to **Add a tasting** for that batch: tap a 1–10 choice, optionally expand
+   notes, and record overall observations and one idea
    to try next. Evaluate the same batch later or make another unchanged batch.
    Invalid scores stay visible with a 1–10 whole-number validation message; they
    are never silently clamped. The journal warns before leaving unsaved batch or
    tasting inputs, including links, Back/Forward, and document reloads. Saving one
    form does not discard or clear protection for unfinished input in the other.
+   Switching journal tasks retains both forms. New journal visits prefer the latest
+   batch without a tasting, falling back to the latest batch. The batch selector
+   always allows another choice. A saved batch offers **Taste now** or **Later**;
+   if another tasting is unfinished, it offers to resume that tasting instead.
+   A saved tasting shows the batch, date, scores, notes, and next idea immediately.
+   **Try this as a variation** creates an inherited draft with that idea as an
+   editable, unsaved question. It still requires an explicit save.
 6. Select a winner as the current standard. It can still be the starting point
    for variations.
 7. Try a variation from any version. Pick an optional metric to improve and write
@@ -44,9 +56,22 @@ claim of causation. Purchase prices do not count as experiment variables.
 Corrections to preserved versions compare against that version's saved content
 and require only their correction reason, not another experiment explanation.
 
+The editor puts ingredients and preparation first, with optional costs, linked
+recipes, step notes, and version notes in disclosures. Its experiment coach sits
+alongside the recipe on large screens and below it on phones, expanding when
+several changes need an explanation. A compact link jumps to the plan on the
+current page, keeping unfinished inputs and any tasting-idea context. The save
+bar reserves space for keyboard focus even when its actions wrap.
+
+**Kitchen view** presents the exact saved recipe, including recipe-level notes,
+with large ingredient and step checkmarks. Checkmarks belong only to the current
+open page and can be reset; they never change the recipe or record a batch
+automatically. **Record this batch** opens the regular batch form.
+
 ## Understanding history
 
-Use **Delete draft** in the version editor or version details to abandon an
+Use **Delete draft** under **Draft options** in the editor or **More recipe actions**
+in version details to abandon an
 unused draft. **Keep draft** cancels; **Delete permanently** confirms removal,
 including pending editor changes and attached photos. Deleting the only version
 also removes the recipe from the library. Otherwise, the remaining history stays
@@ -59,6 +84,15 @@ versions. Compare ingredients, preparation, experiment notes, photos, and scores
 with their notes and deltas. Choose specific tastings on either side; the latest
 dated tasting is the default, with recording time breaking ties. Blank means
 unassessed. The cook chooses the standard; scores do not automatically pick it.
+History summarizes changes and scored results, with a green current-standard
+section. Comparison leads with a concise overview, retains exact changes and
+selected tasting identities, and groups unassessed criteria and optional context
+in disclosures. Score differences do not imply that a particular edit caused them.
+
+Signed-in Home opens the library. Search and filters find drafts, standards, and
+recipes awaiting a tasting. The newest created draft has a resume action; recipe
+cards offer the relevant next action. Recipes without photos use a compact text
+cover rather than an empty image area.
 
 Versions become preserved when used for a batch, selected as a standard, or used
 as a variation's starting point. Corrections require a reason and retain the
@@ -112,13 +146,20 @@ selections remain visible too.
   access before serving them.
   Storage outages show an error while preserving earlier successful uploads.
   Unconfirmed uploads and failed compensating deletes are queued for cleanup.
+  Upload progress identifies the current file and saved count. Recipe settings
+  provide photo previews, editable captions, and a library cover choice from that
+  recipe's photos. Automatic cover selection prefers a photo from the standard,
+  then the first available photo. Deleting a draft that supplied the cover clears
+  the choice. Photos retain their original version ownership. **Add photos** jumps
+  to the current version's uploader. **Choose a cover or edit captions** opens the
+  photo section in settings, with an explanation when no photos are available.
 - A print view includes the recipe and expands nested formulations. Browser
   printing supports paper or PDF and hides navigation and editing controls.
 
 ## Implementation
 
 Library, history, comparisons, printing, workspace setup, and the shell use
-static SSR. Editors and action/upload areas opt into InteractiveAuto. A shared
+static SSR. Editors, the kitchen checklist, and action/upload areas opt into InteractiveAuto. A shared
 `INotebookService` has a scoped server implementation and a WebAssembly HTTP
 adapter. Identity remains static SSR. Fluent UI v5 supplies controls, layout,
 icons, and theme tokens. Appearance follows the system or an explicit light/dark

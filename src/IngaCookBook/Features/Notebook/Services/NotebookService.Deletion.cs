@@ -38,6 +38,7 @@ internal sealed partial class NotebookService
         }
         else
         {
+            if (version.Photos.Any(p => p.Id == recipe.CoverPhotoId)) { recipe.CoverPhotoId = null; }
             db.Remove(version);
             recipe.Revision = Guid.NewGuid();
             recipe.UpdatedAt = DateTimeOffset.UtcNow;

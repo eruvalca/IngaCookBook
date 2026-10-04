@@ -17,6 +17,11 @@ public sealed partial class CompareVersions
     private BatchEvaluation? _leftEvaluation;
     private BatchEvaluation? _rightEvaluation;
     private IReadOnlyList<RecipeDifference> _changes = [];
+    private IEnumerable<EvaluationMetric> ObservedMetrics => _recipe?.Metrics.Where(HasObservation) ?? [];
+    private IEnumerable<EvaluationMetric> UnassessedMetrics => _recipe?.Metrics.Where(m => !HasObservation(m)) ?? [];
+
+    private bool HasObservation(EvaluationMetric metric) => new[] { _leftEvaluation, _rightEvaluation }
+        .Any(e => e?.Scores.Any(s => s.MetricId == metric.Id && (s.Score is not null || !string.IsNullOrWhiteSpace(s.Notes))) == true);
 
     protected override Task OnParametersSetAsync() => RunAsync(async () =>
     {
