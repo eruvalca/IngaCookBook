@@ -10,7 +10,16 @@ public sealed partial class VersionActions
     [Parameter, EditorRequired] public Guid Revision { get; set; }
     [Parameter] public bool Locked { get; set; }
     [Parameter] public bool IsStandard { get; set; }
+    [Parameter, EditorRequired] public bool OnlyVersion { get; set; }
     private string _newName = "";
+
+    private Task DeleteDraftAsync() => RunAsync(async () =>
+    {
+        if (Saved(await Notebook.DeleteDraftAsync(RecipeId, VersionId, new(Revision))))
+        {
+            Navigation.NavigateTo(OnlyVersion ? "/recipes" : $"/recipes/{RecipeId}");
+        }
+    });
 
     private Task VaryAsync() => RunAsync(async () =>
     {

@@ -30,7 +30,7 @@ public sealed class NotebookComponentsTests
         var revision = Guid.NewGuid();
         var created = Guid.NewGuid();
         service.VaryAsync(recipe, version, new(revision), Arg.Any<CancellationToken>()).Returns(new ChangeSaved(created));
-        var component = context.Render<VersionActions>(p => p.Add(c => c.RecipeId, recipe).Add(c => c.VersionId, version).Add(c => c.Revision, revision));
+        var component = context.Render<VersionActions>(p => p.Add(c => c.RecipeId, recipe).Add(c => c.VersionId, version).Add(c => c.Revision, revision).Add(c => c.OnlyVersion, true));
         await component.FindAll("fluent-button").Single(b => b.TextContent.Contains("Try a variation", StringComparison.Ordinal)).ClickAsync();
         await component.WaitForAssertionAsync(() =>
             context.Services.GetRequiredService<NavigationManager>().Uri.ShouldEndWith($"/recipes/{recipe}/versions/{created}/edit"));
@@ -50,7 +50,7 @@ public sealed class NotebookComponentsTests
         service.VaryAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<RevisionRequest>(), Arg.Any<CancellationToken>())
             .Returns(new ChangeRejected("Another device saved changes. Reload first.", 409));
         var component = context.Render<VersionActions>(p => p.Add(c => c.RecipeId, Guid.NewGuid())
-            .Add(c => c.VersionId, Guid.NewGuid()).Add(c => c.Revision, Guid.NewGuid()));
+            .Add(c => c.VersionId, Guid.NewGuid()).Add(c => c.Revision, Guid.NewGuid()).Add(c => c.OnlyVersion, true));
         var before = context.Services.GetRequiredService<NavigationManager>().Uri;
         await component.FindAll("fluent-button").Single(b => b.TextContent.Contains("Try a variation", StringComparison.Ordinal)).ClickAsync();
         await component.WaitForAssertionAsync(() => component.Find("[role=alert]").TextContent.ShouldContain("Reload first"));
@@ -69,7 +69,7 @@ public sealed class NotebookComponentsTests
         context.Services.AddSingleton(Substitute.For<INotebookService>());
         context.Renderer.SetRendererInfo(new RendererInfo("Server", interactive));
         var component = context.Render<VersionActions>(p => p.Add(c => c.RecipeId, Guid.NewGuid())
-            .Add(c => c.VersionId, Guid.NewGuid()).Add(c => c.Revision, Guid.NewGuid()));
+            .Add(c => c.VersionId, Guid.NewGuid()).Add(c => c.Revision, Guid.NewGuid()).Add(c => c.OnlyVersion, true));
         component.FindAll("fluent-button")[0].HasAttribute("disabled").ShouldBe(!interactive);
     }
 

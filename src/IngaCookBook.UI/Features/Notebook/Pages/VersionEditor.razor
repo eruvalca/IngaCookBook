@@ -12,6 +12,10 @@
 {
     <p class="eyebrow">@_recipe.Name · VERSION @_version.Number</p>
     <h1>@(_version.IsLocked ? "Correct the record" : "Shape your next discovery")</h1>
+    @if (!_version.IsLocked)
+    {
+        <DraftDeletion Disabled="@EditorDisabled" OnlyVersion="@(_recipe.Versions.Count == 1)" Confirmed="DeleteDraftAsync" />
+    }
     @if (_version.IsLocked)
     {
         <p class="notice" data-kind="information">This version is preserved. For a new experiment, try a variation. Corrections retain the previous content and your explanation.</p>
@@ -122,6 +126,5 @@
 else if (!Busy && Error is null) { <h1>Version not found</h1> }
 </div>
 <FluentProviders />
-
 
 

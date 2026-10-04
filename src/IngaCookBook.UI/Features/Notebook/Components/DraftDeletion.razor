@@ -1,0 +1,23 @@
+@if (!_confirming)
+{
+    <FluentButton Appearance="ButtonAppearance.Subtle" Disabled="@Disabled" OnClick="ShowConfirmation" IconStart="@(new Icons.Regular.Size20.Delete())">Delete draft</FluentButton>
+}
+else
+{
+    <section class="notice" data-kind="warning" role="group" aria-label="Delete draft confirmation">
+        <h2>Delete this draft?</h2>
+        <p>This permanently removes this draft and its photos, including any unsaved edits. This cannot be undone.</p>
+        @if (OnlyVersion)
+        {
+            <p>This is the recipe's only version, so the recipe will also be removed from your library.</p>
+        }
+        else
+        {
+            <p>The recipe's other versions and recorded results will stay in your notebook.</p>
+        }
+        <FluentStack Wrap="true" HorizontalGap="var(--spacingHorizontalM)">
+            <FluentButton Disabled="@Disabled" OnClick="Cancel">Keep draft</FluentButton>
+            <FluentButton Disabled="@Disabled" OnClick="ConfirmAsync">Delete permanently</FluentButton>
+        </FluentStack>
+    </section>
+}

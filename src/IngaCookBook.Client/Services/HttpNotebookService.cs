@@ -36,6 +36,9 @@ internal sealed class HttpNotebookService(HttpClient http) : INotebookService
     public Task<NotebookChange> VaryAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken = default) =>
         SendAsync(HttpMethod.Post, $"{VersionPath(recipeId, versionId)}/variations", request, cancellationToken);
 
+    public Task<NotebookChange> DeleteDraftAsync(Guid recipeId, Guid versionId, RevisionRequest request, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Delete, $"{VersionPath(recipeId, versionId)}/", request, cancellationToken);
+
     public Task<NotebookChange> MakeBatchAsync(Guid recipeId, Guid versionId, BatchRequest request, CancellationToken cancellationToken = default) =>
         SendAsync(HttpMethod.Post, $"{VersionPath(recipeId, versionId)}/batches", request, cancellationToken);
 

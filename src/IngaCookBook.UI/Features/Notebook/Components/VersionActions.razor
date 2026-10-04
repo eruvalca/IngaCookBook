@@ -7,6 +7,10 @@
         <FluentButton Appearance="ButtonAppearance.Primary" Disabled="@Disabled" OnClick="VaryAsync" IconStart="@(new Icons.Regular.Size20.Branch())">Try a variation</FluentButton>
         <FluentButton Disabled="@(Disabled || IsStandard)" OnClick="StandardAsync" IconStart="@(new Icons.Regular.Size20.Star())">@(IsStandard ? "Current standard" : "Set as standard")</FluentButton>
     </FluentStack>
+    @if (!Locked)
+    {
+        <DraftDeletion Disabled="@Disabled" OnlyVersion="@OnlyVersion" Confirmed="DeleteDraftAsync" />
+    }
     <details><summary>Make this a separate recipe</summary><p>The new recipe starts with this formulation. Its future history is independent; this experiment stays here.</p>
         <FluentStack Wrap="true" VerticalAlignment="VerticalAlignment.Bottom" Class="control-row" HorizontalGap="var(--spacingHorizontalM)">
             <FluentTextInput Disabled="@Disabled" Label="New recipe name" @bind-Value="_newName" />

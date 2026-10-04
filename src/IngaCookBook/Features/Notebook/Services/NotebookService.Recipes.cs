@@ -158,7 +158,7 @@ internal sealed partial class NotebookService
         }
         var metrics = original.Metrics.ToDictionary(m => m.Id, m => new EvaluationMetric(Guid.NewGuid(), m.Name));
         var target = source.Content.TargetMetricId is { } targetId && metrics.TryGetValue(targetId, out var mapped) ? mapped.Id : (Guid?)null;
-        return await InsertAsync(new RecipeDocument
+        return await InsertPromotionAsync(new RecipeDocument
         {
             Name = request.Name.Trim(),
             Description = original.Description,
@@ -166,6 +166,6 @@ internal sealed partial class NotebookService
             OriginVersionId = source.Id,
             Metrics = metrics.Values.ToArray(),
             Versions = [new RecipeVersion { Number = 1, Content = source.Content with { Label = "Starting recipe", TargetMetricId = target } }],
-        }, cancellationToken);
+        }, request.Revision, cancellationToken);
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Testcontainers.PostgreSql;
@@ -18,7 +19,7 @@ internal sealed class NotebookTestStore(PostgreSqlContainer container, ServicePr
     internal MemoryPhotos Photos { get; } = new();
     internal AsyncServiceScope CreateScope() => provider.CreateAsyncScope();
 
-    internal static async Task<NotebookTestStore> CreateAsync(CancellationToken ct)
+    internal static async Task<NotebookTestStore> CreateAsync(CancellationToken ct, IInterceptor? interceptor = null)
     {
         var container = new PostgreSqlBuilder("postgres:18.3").Build();
         ServiceProvider? provider = null;
@@ -27,7 +28,14 @@ internal sealed class NotebookTestStore(PostgreSqlContainer container, ServicePr
             await container.StartAsync(ct);
             var services = new ServiceCollection();
             services.AddLogging();
-            services.AddDbContextFactory<ApplicationDbContext>(options => options.UseNpgsql(container.GetConnectionString(), postgres => postgres.EnableRetryOnFailure()));
+            services.AddDbContextFactory<ApplicationDbContext>(options =>
+            {
+                options.UseNpgsql(container.GetConnectionString(), postgres => postgres.EnableRetryOnFailure());
+                if (interceptor is not null)
+                {
+                    options.AddInterceptors(interceptor);
+                }
+            });
             services.AddIdentityCore<ApplicationUser>(options => options.Stores.SchemaVersion = IdentitySchemaVersions.Version3)
                 .AddEntityFrameworkStores<ApplicationDbContext>();
             services.AddScoped<IAccountDeletionService, AccountDeletionService>();

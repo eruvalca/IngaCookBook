@@ -15,7 +15,7 @@
         <a href="@($"/recipes/{RecipeId}/versions/{VersionId}/print")">Print recipe</a>
         <a href="@($"/recipes/{RecipeId}/compare?right={VersionId}&left={_version.ParentId}")">Compare changes</a>
     </FluentStack>
-    <VersionActions RecipeId="RecipeId" VersionId="VersionId" Revision="_recipe.Revision" Locked="_version.IsLocked" IsStandard="@(_recipe.StandardVersionId == VersionId)" @rendermode="InteractiveAuto" />
+    <VersionActions RecipeId="RecipeId" VersionId="VersionId" Revision="_recipe.Revision" Locked="_version.IsLocked" OnlyVersion="@(_recipe.Versions.Count == 1)" IsStandard="@(_recipe.StandardVersionId == VersionId)" @rendermode="InteractiveAuto" />
     @if (!string.IsNullOrWhiteSpace(_version.Content.Hypothesis))
     {
         <section class="experiment-summary"><span class="eyebrow">THE QUESTION BEHIND THIS VERSION</span><p>@_version.Content.Hypothesis</p>

@@ -46,6 +46,14 @@ and require only their correction reason, not another experiment explanation.
 
 ## Understanding history
 
+Use **Delete draft** in the version editor or version details to abandon an
+unused draft. **Keep draft** cancels; **Delete permanently** confirms removal,
+including pending editor changes and attached photos. Deleting the only version
+also removes the recipe from the library. Otherwise, the remaining history stays
+intact and the app returns to it. Preserved versions and versions used as an
+origin cannot be deleted. Deleting a variation does not unlock its preserved
+starting version. Stale tabs must reload before deleting.
+
 Each recipe has a timeline, a branching view, and comparison between any two
 versions. Compare ingredients, preparation, experiment notes, photos, and scores
 with their notes and deltas. Choose specific tastings on either side; the latest
@@ -54,7 +62,8 @@ unassessed. The cook chooses the standard; scores do not automatically pick it.
 
 Versions become preserved when used for a batch, selected as a standard, or used
 as a variation's starting point. Corrections require a reason and retain the
-previous content in a visible correction history. A variation can become a
+previous content in a visible correction history. Making a separate recipe also
+preserves its origin atomically with creating the copy. A variation can become a
 separate recipe with its own future history and a link to its origin. Its prior
 batches and photos stay with the original recipe.
 
@@ -130,6 +139,9 @@ workspace. Recipe reads, writes, nested references, and photos check that owner
 and workspace. Explicit workspace IDs provide the boundary for future members;
 sharing, invitations, and role management are absent from this release.
 
+Deleting a draft removes its version records and durably queues cleanup of that
+version's photo prefix in the same database transaction. Photos become
+inaccessible immediately; the existing background worker retries blob removal.
 Deleting the account removes its recipe records and durably queues its photo
 removal in the same database transaction. Photos become inaccessible through the
 app immediately; a background worker retries Azure cleanup until it succeeds.

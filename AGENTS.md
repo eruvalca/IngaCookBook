@@ -267,6 +267,13 @@ dotnet test --solution IngaCookBook.slnx
 
 ## Aspire and PostgreSQL
 
+- The application is currently pre-deployment, with no real users and only test
+  data. Backward compatibility with earlier development data is not required.
+  When a schema change warrants it, replacing the migration history with a fresh
+  initial migration and resetting this application's development database is
+  authorized. Confirm the exact IngaCookBook target before resetting; this does
+  not authorize deleting other projects' resources. Do not reset data or rewrite
+  migrations for changes that do not need it. Revisit this policy before rollout.
 - Aspire is the default application run/debug entry point. Use the CLI for agent
   runs and the checked-in **Aspire: IngaCookBook** VS Code configuration for F5 debugging;
   in Visual Studio, use `IngaCookBook.AppHost` as the startup project. Do not bypass

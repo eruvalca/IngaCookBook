@@ -205,6 +205,12 @@ Render boundaries are deliberate:
   `app.css` explicitly resets the Fluent baseline's body height/overflow. Check
   actual wheel scrolling on a long form; automation can focus or scroll an input
   into view even when ordinary scrolling is blocked.
+  Both navigation menus explicitly use `colorNeutralBackground2` for their surface
+  and `colorBrandBackground2` for hover, so account settings follow the same
+  light/dark/system palette as the main navigation instead of Fluent's defaults.
+  The signed-in link is labeled **My account** so long email addresses do not
+  wrap in the sidebar. Fluent's vertical bar and `aria-current="page"` identify
+  the active link; the temporary hover background does not indicate selection.
   The account settings menu does not use interactive categories or event callbacks.
 - Identity forms retain native inputs, submit buttons, form names, antiforgery,
   and passkey hooks. They receive Fluent token styling while preserving static
@@ -330,6 +336,14 @@ provider credentials, production secrets, HTTPS/domain configuration, deployment
 and the desired exposure of health endpoints also require application-specific work.
 
 ## EF migrations
+
+During the current pre-deployment stage, all data is disposable test data and
+earlier development schemas need not remain compatible. Schema changes may
+replace the migration history with a new initial migration and reset the
+IngaCookBook development database. Verify the application/database target first,
+generate through the migration resource below, and verify startup and migration
+tests against the fresh baseline. Do not reset other projects or reset data for
+changes that need no schema update. Revisit this policy before real users or deployment.
 
 `Aspire.Hosting.EntityFrameworkCore` **13.6.0-preview.1.26479.8** manages
 `ingacookbook-migrations` and its **dotnet-ef 10.0.12** tool. It does not alter the machine's

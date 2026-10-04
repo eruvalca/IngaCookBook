@@ -12,7 +12,7 @@
         <FluentNavSectionHeader Title="Account" />
         <AuthorizeView>
             <Authorized>
-                <FluentNavItem Href="Account/Manage" IconRest="@(new Icons.Regular.Size20.Person())" tabindex="0">@context.User.Identity?.Name</FluentNavItem>
+                <FluentNavItem Href="Account/Manage" IconRest="@(new Icons.Regular.Size20.Person())" tabindex="0">My account</FluentNavItem>
             </Authorized>
             <NotAuthorized>
                 <FluentNavItem Href="Account/Register" IconRest="@(new Icons.Regular.Size20.PersonAdd())" tabindex="0">Register</FluentNavItem>

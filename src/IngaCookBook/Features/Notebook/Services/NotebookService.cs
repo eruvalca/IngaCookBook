@@ -81,15 +81,7 @@ internal sealed partial class NotebookService(
         }
         changed = changed with { Revision = Guid.NewGuid(), UpdatedAt = DateTimeOffset.UtcNow };
         RecipeMapping.Apply(entity, changed);
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken);
-            return new ChangeSaved(resultId);
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            return Conflict();
-        }
+        return await SaveRecipeChangeAsync(db, id, revision, resultId, cancellationToken);
     }
 
     private async Task<NotebookChange> InsertAsync(RecipeDocument recipe, CancellationToken cancellationToken)

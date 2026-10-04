@@ -19,6 +19,10 @@ their resources. No test targets a development database.
 | Exact recipe versions, repeated batches/tastings, standard selection, corrections, independent promotion | `NotebookPersistenceTests.RecipeLifecyclePreservesBatchesCorrectionsStandardsAndIndependentPromotion` checks persisted quantities, scores, histories, provenance, and independent metric identities. |
 | Focused experiments with warnings and an explanation for related changes | `NotebookPersistenceTests.VariationsRequireExplanationAndStaleEditsCannotOverwriteSavedWork`; `NotebookWorkflowTests.CookCanRecordEvaluateCompareAndPrintAnExperiment` exercises the warning and rejected/accepted saves through the UI. |
 | Workspace isolation, including photos | `NotebookPersistenceTests.WorkspaceIsolationProtectsRecipesWritesAndPhotos` verifies denial of another owner's reads, edits, uploads, and downloads. |
+| Abandoned drafts and recipe removal | `DeletingOnlyDraftRemovesRecipeAndQueuesOnlyItsPhotos` checks database cascades, workspace retention, inaccessible deleted photos, and cleanup restricted to the deleted version. `DeletingVariationRetainsBaselineAndSiblingAndRejectsStaleWrites` checks retained content, provenance, and stale/repeated writes. |
+| Preserve history and reject unauthorized deletion | `DeletionProtectsPreservedAndReferencedVersions` covers batches, standards, child variations, and independent promotion. `DeletionRejectsStaleMissingAndOtherWorkspaceRequestsWithoutCleanup` verifies rejection without a cleanup job. |
+| Atomic deletion and concurrent preservation | `CleanupQueueFailureRollsBackDraftDeletion` injects check/FK failures and verifies rollback without disguising unexpected errors as conflicts. `PreservationWinningDuringDeletionIsRetainedAsAConflict` and `DeletionWinningDuringPreservationReturnsAConflictWithoutRecreatingTheDraft` exercise both commit orders for batch/standard/variation/promotion, for an only draft and a child draft. `UploadRacingDraftDeletionCannotRecreateTheDraftOrLeaveItsBlob` checks upload compensation. |
+| Confirm draft deletion and retain canceled/rejected edits | `DraftDeletionRequiresConfirmationAndNavigatesAfterSuccess`, `RejectedDraftDeletionRetainsEditorInputsAndUnlocksTheForm`, and `PreservedVersionsDoNotOfferDraftDeletion` cover component behavior. `CookCanDiscardDraftsWithoutLosingPreservedHistory` verifies Server/desktop and WebAssembly/mobile cancellation, dirty-editor deletion without a second guard, version-details deletion, empty first-draft recipe removal, and DELETE antiforgery rejection. |
 | Changes to recipe-wide metrics | `NotebookPersistenceTests.CriteriaChangesLeaveNewScoresBlankAndDeleteRemovedScores` verifies missing historical scores and removal of scores/notes while general observations survive. |
 | Pinned recipes inside recipes | `NotebookPersistenceTests.LinkedRecipesKeepSavedContentWhenSourceIsCorrected`; `NotebookComponentsTests.RecipeSheetRendersPinnedSubrecipeAndPreservesTextWithoutInterpretingMarkup`. |
 | Compatible-unit costs and incomplete estimates | `NotebookRulesTests.CompatiblePurchaseUnitsProduceProportionalCost`, `CostNeverGuessesAcrossMeasurementFamilies`, and `MissingPricesRemainUnknownAndNestedRecipesUseTheirSavedYield` assert exact monetary results and unknown costs. |
@@ -50,6 +54,112 @@ cleanup retries, and nested-cost precision. No mutation score or coverage
 percentage is claimed.
 bUnit verifies rendered behavior; it does not stand in for browser JavaScript,
 layout, storage, or PostgreSQL checks.
+
+## Draft deletion — October 3, 2026
+
+The editor and version details now offer **Delete draft** with an explicit
+confirmation. Browser checks cover keeping unsaved edits after cancellation,
+deleting a dirty variation without a second discard prompt, removing an empty
+first draft and its recipe, deleting from details, keeping the original preserved
+version, and rejecting a DELETE without an antiforgery token. The runs use
+Server at 1280 × 900 and WebAssembly at 390 × 900. Both confirmation screenshots
+were inspected; controls and text fit, with no horizontal overflow. Local evidence
+is under `tests/IngaCookBook.PlaywrightTests/bin/Debug/net10.0/TestResults/draft-deletion-*/`.
+
+PostgreSQL tests verify ownership, stale tabs, recipe/child retention, durable
+photo cleanup, upload compensation, and rollback when saving the cleanup job
+fails. Deterministic save interceptors commit a competing operation after the
+other has read its data. Both write orders cover batches, standards, child
+variations, and promotion, for an only draft and an existing child draft.
+
+These race checks initially exposed FK exceptions before EF reached its recipe
+revision check (2 of 8 cases in one order, 5 of 8 in the other). Writes now verify
+a changed/missing revision after those transaction rollbacks and return a conflict;
+unexpected integrity errors with an unchanged revision still propagate. Promotion
+preserves its source in the same transaction as its independent copy. The full
+PostgreSQL suite subsequently passed 63 cases. No schema change or database reset
+was needed.
+
+A repeated browser run caught a test timing issue: the outgoing editor and
+incoming details page both contain a Delete draft button. The test now waits for
+the destination heading before clicking it, rather than clicking during enhanced
+navigation. The original desktop/mobile recipe workflow also passed after the
+server changes.
+
+Final project/group runs passed **534 tests**: **206 unit**, **260 component**,
+**63 PostgreSQL integration**, **1 Aspire integration**, and **4 targeted Chromium
+cases** (two deletion cases and two existing recipe-workflow cases), with **0
+failed** and **0 skipped** in those final runs. The other browser groups were not
+rerun for this feature. Earlier investigative failures are described above and
+are not counted as additional tests.
+
+Commands from the repository root (the full build precedes `--no-build` runs):
+
+```powershell
+dotnet format IngaCookBook.slnx --severity warn
+dotnet build IngaCookBook.slnx
+dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.IntegrationTests/IngaCookBook.IntegrationTests.csproj
+dotnet test --project tests/IngaCookBook.AspireIntegrationTests/IngaCookBook.AspireIntegrationTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-build --filter-method '*CookCanRecordEvaluateCompareAndPrintAnExperiment'
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --filter-method '*CookCanDiscardDraftsWithoutLosingPreservedHistory'
+dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
+pwsh ./scripts/Test-RazorCodeBehind.ps1
+```
+
+The full solution build passed with zero warnings/errors, and formatting
+verification was clean. All **17 Razor policy checks** passed after
+rerunning with access to the user NuGet configuration; the initial sandboxed
+attempt could not read that file.
+
+Documentation review updated the product guide, this validation record, test
+scope descriptions, and the authorized pre-deployment data policy in AGENTS.md
+and README.md. Build conventions remain accurate. Existing pending navigation
+changes were retained. The test fixtures disposed their isolated resources.
+
+## Account menu theme follow-up — October 3, 2026
+
+The account settings `FluentNav` now uses the same surface and hover tokens as
+the main navigation. Its omitted parameters previously selected Fluent's
+`colorNeutralBackground4` defaults, producing the contrasting gray panel.
+
+Chromium checks at 1440 and 390 pixels confirmed matching menu surfaces in
+light/dark/system modes, matching desktop hover colors, visible keyboard focus,
+active Email/Password links after navigation, retained appearance after reload,
+and no horizontal overflow on the phone layout. Screenshots were inspected and
+are local under ignored `TestResults/menu-theme/`. The mobile drawer opened and
+closed. A headless-browser WebAuthn `NotSupportedError` was observed during the
+password-login session; this run does not establish passkey support.
+
+The subsequent navigation-state check confirmed that the Recipes background in
+the earlier previews was a hover effect, not incorrect route selection. The
+pinned Fluent styles transition that background over 100 ms; `active` and
+`aria-current="page"` stayed on the account link while Recipes was hovered.
+Moving the pointer away and waiting for the background to equal the navigation
+surface restored the neutral state in both themes. Opening the library selected
+Recipes; returning to Profile or Email selected the account link.
+
+The signed-in link now reads **My account**, including for existing users. The
+existing `NavMenuTests.AuthenticationStateSelectsGuestLinksOrAccountAndLogoutAsync`
+assertion was updated. At 390 pixels, the label occupied one text line in a
+40-pixel-high drawer item, with no horizontal overflow. Fresh neutral previews
+and state observations are ignored under `TestResults/navigation-state/`.
+The navigation follow-up recorded no browser page errors and repeated the build
+and unit/component commands below successfully with the same test counts.
+
+The solution build passed with zero warnings/errors. Unit tests passed **206**
+and component tests passed **256**, with **0 failed** and **0 skipped** in each.
+These are repeated existing tests, not additions to the unique counts below.
+Commands from the repository root:
+
+```powershell
+dotnet format IngaCookBook.slnx --severity warn
+dotnet build IngaCookBook.slnx
+dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj --no-build
+dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
+```
 
 ## Brand/layout follow-up — October 3, 2026
 

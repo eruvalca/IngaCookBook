@@ -51,6 +51,8 @@ internal static class NotebookEndpoints
     private static void MapVersions(RouteGroupBuilder group)
     {
         var versions = group.MapGroup("/recipes/{recipeId:guid}/versions/{versionId:guid}");
+        versions.MapDelete("/", async (Guid recipeId, Guid versionId, [FromBody] RevisionRequest request, INotebookService service, CancellationToken ct) =>
+            Reply(await service.DeleteDraftAsync(recipeId, versionId, request, ct)));
         versions.MapPut("/batches/{batchId:guid}", async (Guid recipeId, Guid versionId, Guid batchId, BatchCorrectionRequest request, INotebookService service, CancellationToken ct) =>
             Reply(await service.CorrectBatchAsync(recipeId, versionId, batchId, request, ct)));
         versions.MapGet("/", async Task<Results<Ok<RecipeVersion>, NotFound>> (Guid recipeId, Guid versionId, INotebookService service, CancellationToken ct) =>
