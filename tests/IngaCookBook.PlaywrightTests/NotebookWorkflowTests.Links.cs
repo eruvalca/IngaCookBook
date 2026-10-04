@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using Aspire.Hosting.Testing;
-using IngaCookBook.Testing;
 using Microsoft.Playwright;
 using Shouldly;
 using Xunit;
@@ -14,17 +12,11 @@ public sealed partial class NotebookWorkflowTests
     [InlineData("WebAssembly", 390)]
     public async Task NotebookLinksReachTheirSectionsAndKeepUnsavedInputs(string renderer, int width)
     {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        timeout.CancelAfter(TimeSpan.FromMinutes(5));
-        await using var builder = await TestAppHost.CreateAsync(timeout.Token);
-        await using var app = await builder.BuildAsync(timeout.Token);
-        await app.StartAsync(timeout.Token);
-        await app.ResourceNotifications.WaitForResourceHealthyAsync("ingacookbook", timeout.Token);
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync();
         await using var context = await browser.NewContextAsync(new()
         {
-            BaseURL = app.GetEndpoint("ingacookbook", "https").ToString(),
+            BaseURL = application.Endpoint.ToString(),
             IgnoreHTTPSErrors = true,
             ViewportSize = new() { Width = width, Height = 900 },
         });

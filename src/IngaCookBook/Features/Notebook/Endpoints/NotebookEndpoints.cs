@@ -12,7 +12,7 @@ internal static class NotebookEndpoints
     {
         internal void MapNotebookEndpoints()
         {
-            var group = endpoints.MapGroup("/api/notebook").RequireAuthorization().WithTags("Recipe notebook");
+            var group = endpoints.MapGroup("/api/notebook").RequireAuthorization().DisableCookieRedirect().WithTags("Recipe notebook");
             group.AddEndpointFilter(async (context, next) =>
             {
                 context.HttpContext.Response.Headers.CacheControl = "no-cache, no-store";

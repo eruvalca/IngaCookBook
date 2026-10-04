@@ -33,6 +33,8 @@ public sealed class NotebookRulesTests
     [InlineData("oz", 4, "lb", 1, 16, 4)]
     [InlineData("tbsp (US)", 4, "cup (US)", 1, 8, 2)]
     [InlineData("count", 3, "count", 12, 6, 1.5)]
+    [InlineData("mL", 250, "L", 1, 8, 2)]
+    [InlineData("tsp (US)", 6, "fl oz (US)", 1, 3, 3)]
     public void CompatiblePurchaseUnitsProduceProportionalCost(string unit, decimal used, string purchasedUnit, decimal purchased, decimal price, decimal expected)
     {
         var ingredient = new Ingredient { Name = "Ingredient", Quantity = used, Unit = unit, PurchaseQuantity = purchased, PurchaseUnit = purchasedUnit, PurchasePrice = price };
@@ -43,6 +45,7 @@ public sealed class NotebookRulesTests
     [InlineData("g", "cup (US)")]
     [InlineData("oz", "fl oz (US)")]
     [InlineData("count", "g")]
+    [InlineData("pinch", "pinch")]
     public void CostNeverGuessesAcrossMeasurementFamilies(string usedUnit, string purchasedUnit)
     {
         var ingredient = new Ingredient { Quantity = 10, Unit = usedUnit, PurchaseQuantity = 100, PurchaseUnit = purchasedUnit, PurchasePrice = 10 };

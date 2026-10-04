@@ -85,6 +85,22 @@ and a disposable PostgreSQL database, verifying that a real HTTP abort reaches t
 notebook endpoint, service and EF query. `PhotoStorageFailureTests` covers cancellation
 before writes, ambiguous uploads and finalization/compensation after blob success.
 
+`HttpNotebookResponseTests` exercises real client serialization, antiforgery and
+upload payloads against controlled HTTP responses. `NotebookPageTests` covers
+library search/filter/cover selection and historical comparison selection;
+`NotebookFormSaveTests.Variations.cs` covers promotion, discard choices, step
+ordering and guard readiness. Persistence validation tests assert that rejected
+writes leave the stored recipe and revision unchanged. `PhotoCleanupWorkerTests`
+checks transient failure handling and propagation of unexpected failures.
+
+The browser API scenario follows created-resource `Location` URLs, uploads a
+private photo and checks owner access, cross-workspace `404`, anonymous `401`,
+and ordinary account-page redirects. The Server/WebAssembly guard scenarios
+deliberately hold the UI initializer download while clicking an SSR link: Back
+must still prompt and retain inputs. These checks use controlled events rather
+than fixed sleeps. Current before/after coverage and remaining gaps are recorded
+in [the validation report](../docs/validation.md#suite-reliability-and-coverage--october-4-2026).
+
 ## Build and run
 
 Run these commands from the repository root:
@@ -181,8 +197,19 @@ was selected, passkey ceremonies, or every account workflow.
 Both Aspire and Playwright tests use `IngaCookBook.Testing.TestAppHost`, a small shared
 library that removes container volume/bind mounts and enforces session lifetimes
 on the real AppHost model. Aspire's testing builder disables the dashboard and
-randomizes proxied ports by default. Each test disposes its builder and application,
-including on failure; optional pgAdmin remains unstarted. No manually running
+randomizes proxied ports by default. The Aspire startup test owns its builder and
+application. Browser tests share one disposable AppHost through xUnit's assembly
+fixture `BrowserAppFixture`; each test still owns its browser contexts and uses
+unique registered accounts/workspaces. The fixture exposes only the endpoint and
+does not share pages, cookies, or test input. Sharing the infrastructure prevents
+concurrent browser cases from each starting PostgreSQL, Azurite, migrations and
+the web server. Keep browser methods and theory rows concurrent; this is not a
+collection-level serialization workaround. Builders/apps are disposed on failure
+and at the end of their owning test/fixture; optional pgAdmin remains unstarted.
+Startup failures collect bounded resource states and recent console logs before
+disposal. The Aspire test writes these to its output; the browser assembly uses
+xUnit diagnostic messages (enable `--xunit-diagnostics on` when investigating startup).
+No manually running
 development AppHost or CLI start/stop is required for these test-managed runs.
 Readiness uses Aspire notifications with bounded cancellation, not HTTP polling
 or fixed sleeps. Use a new browser context for each test; no authentication state
@@ -215,8 +242,8 @@ and do not replace the original test failure or prevent the other capture attemp
 its disposable outputs use `TestResults/artifact-capture-*`. Inspect the trace
 with the generated `playwright.ps1 show-trace <path>` command. These artifacts are
 ignored; do not commit traces containing cookies or future test account data.
-Keep the existing parallel settings: test processes, ports, containers and browser
-contexts must be isolated. On constrained CI agents, bound test-module concurrency
+Keep the existing parallel settings: test processes/fixtures own isolated ports
+and containers; browser tests own isolated contexts and accounts. On constrained CI agents, bound test-module concurrency
 with `--max-parallel-test-modules 1`; this does not change test discovery or skip suites.
 
 References (reviewed October 2, 2026): [Aspire testing overview](https://aspire.dev/testing/overview/),

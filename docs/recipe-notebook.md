@@ -21,7 +21,8 @@ evaluation criteria; no workflow depends on ice cream-specific calculations.
    steps. Save explicitly. The editor shows unsaved changes and warns before leaving,
    including version/sidebar links and browser Back/Forward. Canceling keeps the
    current editor and its inputs; confirming discards the unsaved changes.
-   Inputs lock while a save and its reload are in progress, then unlock so later
+   Editing controls, including step reordering, wait until unsaved-change protection
+   is ready. Inputs lock while a save and its reload are in progress, then unlock so later
    edits cannot be silently replaced by that reload. Rejected saves retain inputs.
 4. Record a batch when you make it, including what actually happened during
    preparation. This preserves the recipe version. Batch and tasting dates default
@@ -190,8 +191,9 @@ guarantee that a disconnected circuit is immediately disposed.
 
 Recipe creation, settings, the editor, and the journal reuse collocated JavaScript
 to protect enhanced links and history traversal;
-`NavigationLock` handles programmatic .NET navigation. The shared JS initializer
-indexes history entries while preserving Blazor's state so a canceled Back/Forward
+`NavigationLock` handles programmatic .NET navigation. The application's boot module
+initializes history indexing before starting Blazor, including when a link is
+clicked while the remaining initializers are loading. It preserves Blazor's state so a canceled Back/Forward
 action can restore the original entry without adding another one. Form listeners
 are removed when their DOM is replaced. Full document exits use the browser's native
 unsaved-changes prompt.
@@ -200,6 +202,10 @@ ASP.NET Core Identity supplies authentication. Each owner initially has one
 workspace. Recipe reads, writes, nested references, and photos check that owner
 and workspace. Explicit workspace IDs provide the boundary for future members;
 sharing, invitations, and role management are absent from this release.
+All notebook API routes, including private photo downloads, disable cookie-login
+redirects: unauthenticated requests return `401`, while records outside the
+signed-in user's workspace return `404`. Ordinary account pages retain their
+login redirects.
 
 Deleting a draft removes its version records and durably queues cleanup of that
 version's photo prefix in the same database transaction. Photos become

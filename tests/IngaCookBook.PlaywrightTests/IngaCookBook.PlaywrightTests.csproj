@@ -17,5 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\IngaCookBook.Testing\IngaCookBook.Testing.csproj" />
+    <ProjectReference Include="..\..\src\IngaCookBook.SharedKernel\IngaCookBook.SharedKernel.csproj" />
   </ItemGroup>
 </Project>

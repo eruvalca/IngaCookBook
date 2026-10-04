@@ -5,6 +5,127 @@ addresses the four usability findings and applies the notebook design to editing
 tasting, history, comparison, photos, and the library. The original review of
 `21f20bb` remains in the workflow log as the baseline.
 
+## Suite reliability and coverage — October 4, 2026
+
+The unchanged full suite reproduced **10 browser startup failures**: **582 of
+592 tests passed, 10 failed, 0 skipped**. The browser cases were starting separate
+AppHosts concurrently, alongside the PostgreSQL and Aspire suites. Resource logs
+showed unhealthy container runtimes, migration failures and AppHost startup
+timeouts before the affected workflows reached a browser. This demonstrates
+startup contention in this test arrangement, not a diagnosed Docker engine defect.
+
+Browser tests now share one assembly-owned disposable AppHost. Tests still run
+concurrently with independent browser contexts, accounts and workspaces. The
+`all` / `conservative` / `1x` settings remain unchanged; development volumes are
+still removed and resource teardown remains owned by the fixtures. Startup
+failure diagnostics capture bounded resource state/logs before disposal. Two
+full-suite runs then passed **592/592**, including one coverage baseline run;
+neither needed the earlier method-at-a-time workaround.
+
+Coverage expansion exposed and fixed three application defects:
+
+- Preparation step reorder controls were enabled before the unsaved-input guard
+  finished initializing. They now use the same readiness lock as the editor's
+  other editing controls. The pending-initialization component regression failed
+  before the fix and passed afterward.
+- Anonymous private-photo API requests redirected to login, producing login HTML
+  when redirects were followed. The notebook API group now disables cookie
+  redirects, returning `401`; ordinary account pages still redirect. A real
+  uploaded-photo HTTP regression failed before the fix and passed afterward.
+- A full collected run caught a fast SSR link click before history indexing
+  initialized. Back then reached an unindexed entry without prompting and could
+  lose unsaved input. Holding the actual UI initializer request reproduced this
+  in both Auto renderers (**2 failed**). The application boot module now indexes
+  history before `Blazor.start()`; both delayed-initialization cases passed
+  afterward (**2 passed, 0 failed, 0 skipped**), including Back/Forward, reload
+  dismissal, retained inputs and unchanged document time origin.
+
+The startup ordering was checked against the pinned
+[ASP.NET Core boot implementation](https://github.com/dotnet/aspnetcore/blob/v10.0.12/src/Components/Web.JS/src/Boot.Web.ts):
+enhanced navigation is attached before asynchronous initializers finish. API
+cookie behavior follows the documented
+[`DisableCookieRedirect` endpoint convention](https://learn.microsoft.com/aspnet/core/security/authentication/api-endpoint-auth?view=aspnetcore-10.0).
+
+The new tests assert observable behavior, not only execution or non-null results:
+
+| Requirement | Named evidence |
+| --- | --- |
+| Preserve HTTP outcomes, request payloads and uploaded bytes | `HttpNotebookResponseTests`, including `MissingConfirmationDoesNotReportASuccessfulSave` and `UploadSendsOriginalPhotoBytesAndMetadataToTheSelectedVersion`. |
+| Reject malformed recipes/tastings without changing records or consuming revisions | `NotebookValidationTests`, `RejectedFormulationAndPromotionInputsCannotMutatePersistedContent`, `InvalidTastingsDoNotConsumeTheRevisionOrAppendAnEvaluation`, `IncompleteDraftCannotBecomeABatchOrStandard`. |
+| Keep linked formulations authoritative and stable after source edits | `LinkedIngredientsRejectUnpreservedSourcesAndKeepServerSnapshotsAcrossEdits`. |
+| Select the right library cards, covers, continuation and historical comparisons | `NotebookPageTests` checks exact result sets, targets, parent versions and scores, including blank versus zero. |
+| Respect discard choices, preserve rejected inputs and save actual step order | `NotebookFormSaveTests.Variations.cs`, including `CancelingATastingCorrectionHonorsTheDiscardChoice` and `PreparationReorderingWaitsUntilUnsavedChangesProtectionIsReady`. |
+| Keep cleanup alive on transient failures while surfacing unexpected failures | `PhotoCleanupWorkerTests`, using the real worker and processor with controlled dependency failures. |
+| Resolve created API resources and enforce account boundaries | `ApiCreatedLocationsResolveAndOtherAccountsCannotReadTheNotebook`: recipe/version/batch/evaluation/photo owner reads, other-account `404`, anonymous `401`, and account-page `302`. |
+| Protect input even when the first SSR click races initialization | `EditorProtectsEnhancedNavigationAndJournalUsesBrowserDates` under Server and WebAssembly with a deliberately delayed initializer request. |
+
+Final full-suite validation passed **658 tests, 0 failed, 0 skipped**, including
+**66 new cases**. This is one normal all-projects run, with coverage enabled:
+
+| Suite | Before | Final passed | Failed | Skipped |
+| --- | ---: | ---: | ---: | ---: |
+| Unit | 225 | 262 | 0 | 0 |
+| Component | 282 | 304 | 0 | 0 |
+| PostgreSQL integration | 70 | 76 | 0 | 0 |
+| Aspire integration | 1 | 1 | 0 | 0 |
+| Playwright | 14 | 15 | 0 | 0 |
+
+Coverage uses the existing Microsoft collector and merges the five top-level
+Cobertura reports with `dotnet-coverage` 18.11.2. No collector exclusions or
+analyzer settings were weakened. Application totals exclude only the
+`IngaCookBook.Testing` support library. The handwritten view additionally excludes
+generated `obj` sources and EF migrations, de-duplicates source filename/line
+pairs, and **includes startup code**. Raw branch totals are the collector's
+reported instrumented conditions, including generated code.
+
+| Coverage scope | Before | After |
+| --- | ---: | ---: |
+| Handwritten .NET source lines, including mapped Razor and startup | 4,091 / 4,333 (**94.41%**) | 4,225 / 4,333 (**97.51%**) |
+| All instrumented application lines, including generated code and migrations | 11,036 / 11,871 (**92.97%**) | 11,195 / 11,871 (**94.31%**) |
+| All instrumented application branches | 2,453 / 2,828 (**86.74%**) | 2,600 / 2,884 (**90.15%**) |
+
+The collector follows the test-owned server/AppHost processes, including SSR and
+interactive Server execution. It does **not** measure JavaScript or .NET executing
+inside browser WebAssembly. Browser behavior in both renderers is checked by
+Playwright; the eight WebAssembly startup lines remain uncovered in the .NET
+report. These percentages are not whole-product coverage or a mutation score.
+
+The **108** remaining handwritten lines include production-only middleware,
+some API alternatives normally reached through direct Server services, optional
+correction/photo/nested-recipe display paths, circuit/stream/compensation failure
+handling, and defensive Identity guards. Meaningful future additions include
+direct API workspace/promotion and oversized-upload cases, and browser editing of
+linked ingredients and historical correction displays. Real provider callbacks,
+device passkeys, deployment/restart behavior, and Azure outages remain environment
+validation opportunities. No private-state manipulation or deliberately invalid
+framework state was added just to execute defensive lines.
+
+Commands run from the repository root included:
+
+```powershell
+# Reproduce the unchanged full-suite failures.
+dotnet test --solution IngaCookBook.slnx --report-trx --results-directory TestResults/suite-reliability-before
+# After fixing shared infrastructure, establish the collected baseline.
+dotnet test --solution IngaCookBook.slnx --no-build --coverage --coverage-output-format cobertura --report-trx --results-directory TestResults/coverage-baseline-full
+# Run the deterministic navigation regression before and after its fix.
+dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --filter-method '*EditorProtectsEnhancedNavigationAndJournalUsesBrowserDates' --report-trx --results-directory TestResults/navigation-startup-after
+# Final validation, after building the exact test/application sources.
+dotnet format IngaCookBook.slnx --severity warn
+dotnet build IngaCookBook.slnx
+dotnet test --solution IngaCookBook.slnx --no-build --coverage --coverage-output-format cobertura --report-trx --results-directory TestResults/coverage-verified
+dnx dotnet-coverage -y -- merge 'TestResults/coverage-verified/*.cobertura.xml' -o TestResults/coverage-verified-merged.cobertura.xml -f cobertura
+dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
+```
+
+The build completed with **0 warnings and 0 errors**. Formatting fixes were
+reviewed and final verification was clean. Ignored `TestResults` contains the
+before/after TRX and Cobertura reports, merged reports, `coverage-comparison.json`
+with the per-file uncovered line inventory, and command logs. Browser screenshots
+and traces remain under the test project's output `TestResults` directory. The
+assertion review checked exact outcomes, saved payloads, denied writes, retained
+inputs, selection/navigation and failure handling; three regressions were also
+observed failing against the unfixed application and passing with their fixes.
+
 ## Cancellation validation — October 4, 2026
 
 Before implementation, `dotnet test --solution IngaCookBook.slnx --report-trx

@@ -61,8 +61,8 @@
                             <FluentTextArea Disabled="@EditorDisabled" Label="@($"Step {index + 1}")" @bind-Value="step.Instruction" />
                             <details open="@(!string.IsNullOrWhiteSpace(step.Notes))"><summary>Step notes (optional)</summary><FluentTextInput Disabled="@EditorDisabled" Label="Step notes (optional)" @bind-Value="step.Notes" /></details>
                             <FluentStack HorizontalGap="var(--spacingHorizontalS)" Wrap="true">
-                                <FluentButton OnClick="@(() => MoveStep(index, -1))" Disabled="@(Disabled || index == 0)">Move up</FluentButton>
-                                <FluentButton OnClick="@(() => MoveStep(index, 1))" Disabled="@(Disabled || index == _draft.Steps.Count - 1)">Move down</FluentButton>
+                                <FluentButton OnClick="@(() => MoveStep(index, -1))" Disabled="@(EditorDisabled || index == 0)">Move up</FluentButton>
+                                <FluentButton OnClick="@(() => MoveStep(index, 1))" Disabled="@(EditorDisabled || index == _draft.Steps.Count - 1)">Move down</FluentButton>
                                 <FluentButton OnClick="@(() => _draft.Steps.Remove(step))" Disabled="@EditorDisabled">Remove step</FluentButton>
                             </FluentStack>
                         </div>

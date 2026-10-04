@@ -196,6 +196,11 @@ Render boundaries are deliberate:
   interactive roving-tabindex setup does not run in SSR. Shell links use Blazor's
   enhanced navigation: the server renders the destination and Blazor updates the
   existing document without restarting the page or reloading the runtime.
+  `Components/App.razor.js` indexes history before calling `Blazor.start()`;
+  `blazor.web.js` therefore has `autostart="false"`. Preserve this ordering:
+  enhanced navigation is available before Blazor's JS initializers finish, so
+  indexing only in an initializer can miss a quick first click and bypass the
+  unsaved-changes prompt on Back.
   `IngaCookBook.UI.lib.module.js` registers the collocated `MainLayout.razor.js` handler
   through `afterWebStarted`. It closes the Fluent mobile drawer on
   `enhancednavigationstart`, before the DOM update, including back/forward

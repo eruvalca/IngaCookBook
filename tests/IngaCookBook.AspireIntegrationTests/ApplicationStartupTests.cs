@@ -12,7 +12,7 @@ using Xunit;
 namespace IngaCookBook.AspireIntegrationTests;
 
 [SuppressMessage("Maintainability", "CA1515:Consider making public types internal", Justification = "xUnit requires public test classes for discovery.")]
-public sealed class ApplicationStartupTests
+public sealed class ApplicationStartupTests(ITestOutputHelper output)
 {
     [Fact]
     public async Task AppHostCompletesMigrationsAndServesHealthyApplication()
@@ -23,8 +23,7 @@ public sealed class ApplicationStartupTests
         builder.Resources.SelectMany(resource => resource.Annotations.OfType<ContainerMountAnnotation>())
             .ShouldBeEmpty();
         await using var app = await builder.BuildAsync(timeout.Token);
-        await app.StartAsync(timeout.Token);
-        await app.ResourceNotifications.WaitForResourceHealthyAsync("ingacookbook", timeout.Token);
+        await TestAppHost.StartAsync(app, output.WriteLine, timeout.Token);
         await app.ResourceNotifications.WaitForResourceHealthyAsync("photostorage", timeout.Token);
         await app.ResourceNotifications.WaitForResourceAsync("ingacookbook-migrations", KnownResourceStates.Finished, timeout.Token);
 

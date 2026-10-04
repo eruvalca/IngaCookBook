@@ -1,7 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using Aspire.Hosting.Testing;
-using IngaCookBook.Testing;
 using Microsoft.Playwright;
 using Shouldly;
 using Xunit;
@@ -9,24 +7,18 @@ using Xunit;
 namespace IngaCookBook.PlaywrightTests;
 
 [SuppressMessage("Maintainability", "CA1515:Consider making public types internal", Justification = "xUnit requires public test classes for discovery.")]
-public sealed partial class NotebookWorkflowTests(ITestOutputHelper output)
+public sealed partial class NotebookWorkflowTests(ITestOutputHelper output, BrowserAppFixture application)
 {
     [Theory]
     [InlineData(1280)]
     [InlineData(390)]
     public async Task CookCanRecordEvaluateCompareAndPrintAnExperiment(int width)
     {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        timeout.CancelAfter(TimeSpan.FromMinutes(5));
-        await using var builder = await TestAppHost.CreateAsync(timeout.Token);
-        await using var app = await builder.BuildAsync(timeout.Token);
-        await app.StartAsync(timeout.Token);
-        await app.ResourceNotifications.WaitForResourceHealthyAsync("ingacookbook", timeout.Token);
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync();
         await using var context = await browser.NewContextAsync(new()
         {
-            BaseURL = app.GetEndpoint("ingacookbook", "https").ToString(),
+            BaseURL = application.Endpoint.ToString(),
             IgnoreHTTPSErrors = true,
             ViewportSize = new() { Width = width, Height = 900 },
         });

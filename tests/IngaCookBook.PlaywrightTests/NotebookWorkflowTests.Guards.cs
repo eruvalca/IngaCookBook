@@ -1,5 +1,3 @@
-using Aspire.Hosting.Testing;
-using IngaCookBook.Testing;
 using Microsoft.Playwright;
 using Shouldly;
 using Xunit;
@@ -13,17 +11,11 @@ public sealed partial class NotebookWorkflowTests
     [InlineData("WebAssembly")]
     public async Task EditorProtectsEnhancedNavigationAndJournalUsesBrowserDates(string renderer)
     {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        timeout.CancelAfter(TimeSpan.FromMinutes(5));
-        await using var builder = await TestAppHost.CreateAsync(timeout.Token);
-        await using var app = await builder.BuildAsync(timeout.Token);
-        await app.StartAsync(timeout.Token);
-        await app.ResourceNotifications.WaitForResourceHealthyAsync("ingacookbook", timeout.Token);
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync();
         await using var context = await browser.NewContextAsync(new()
         {
-            BaseURL = app.GetEndpoint("ingacookbook", "https").ToString(),
+            BaseURL = application.Endpoint.ToString(),
             IgnoreHTTPSErrors = true,
             TimezoneId = "America/Chicago",
         });
@@ -46,8 +38,7 @@ public sealed partial class NotebookWorkflowTests
             await RegisterAndCreateWorkspaceAsync(page);
             await CreateBaselineAsync(page);
             var details = page.Url.Replace("/edit", "", StringComparison.Ordinal);
-            await page.GotoAsync(details);
-            await page.GetByRole(AriaRole.Link, new() { Name = "Edit draft", Exact = true }).ClickAsync();
+            await EnterEditorBeforeInitializersFinishAsync(page, details);
             await page.Locator($"[data-renderer={renderer}]").WaitForAsync(new() { Timeout = 60000 });
             await VerifyEditorGuardAsync(page, details);
             await VerifyLocalDatesAsync(page, details, renderer);
@@ -59,6 +50,33 @@ public sealed partial class NotebookWorkflowTests
             await BrowserArtifacts.CaptureAsync(page, context, artifacts, output.WriteLine);
             releaseDownload.TrySetResult();
             await context.UnrouteAllAsync(new() { Behavior = UnrouteBehavior.Wait });
+        }
+    }
+
+    private static async Task EnterEditorBeforeInitializersFinishAsync(IPage page, string details)
+    {
+        // A fast SSR link can be clicked while Blazor is still downloading its
+        // initializers. Keep that startup window open without relying on timing.
+        const string Initializer = "**/_content/IngaCookBook.UI/IngaCookBook.UI*.lib.module.js";
+        var requested = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await page.RouteAsync(Initializer, async route =>
+        {
+            requested.TrySetResult();
+            await release.Task;
+            await route.ContinueAsync();
+        });
+        try
+        {
+            await page.GotoAsync(details, new() { WaitUntil = WaitUntilState.DOMContentLoaded });
+            await requested.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+            await page.GetByRole(AriaRole.Link, new() { Name = "Edit draft", Exact = true }).ClickAsync();
+            await page.WaitForURLAsync(details + "/edit", new() { WaitUntil = WaitUntilState.Commit });
+        }
+        finally
+        {
+            release.TrySetResult();
+            await page.UnrouteAllAsync(new() { Behavior = UnrouteBehavior.Wait });
         }
     }
 
