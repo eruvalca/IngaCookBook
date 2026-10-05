@@ -32,6 +32,7 @@ az bicep install --version v0.47.16
 ./scripts/Test-DeploymentModel.ps1
 ./scripts/Test-MigrationBundle.ps1
 ./scripts/Test-DeploymentWorkflow.ps1
+./scripts/Test-ProductionChecks.ps1
 ```
 
 The model check runs `aspire publish` in a separate `Validation` environment with a
@@ -51,6 +52,11 @@ lookups cannot authorize deployment. It also checks the deployment lock, that th
 guard is the first deployment step, and that every later step requires its success.
 It needs only PowerShell 7 and performs no GitHub or Azure calls. CI runs it before
 the infrastructure checks.
+
+The production HTTP check test executes the actual smoke script with stubbed Azure,
+HTTP, and delay commands. Nine scenarios cover ready endpoints, temporary connection,
+timeout and gateway failures, exhausted retries, missing routes, unhealthy payloads,
+and unexpected exceptions. It performs no external requests or real delays.
 
 CI exports the public development HTTPS certificate with `dotnet dev-certs` and
 adds it to Ubuntu's CA store on its disposable runner before running integration

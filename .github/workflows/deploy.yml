@@ -34,6 +34,9 @@ jobs:
       - name: Check stale-deployment protection without GitHub or Azure
         shell: pwsh
         run: ./scripts/Test-DeploymentWorkflow.ps1
+      - name: Check production HTTP retry behavior without network access
+        shell: pwsh
+        run: ./scripts/Test-ProductionChecks.ps1
       - name: Install Chromium and dependencies
         shell: pwsh
         run: ./tests/IngaCookBook.PlaywrightTests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium

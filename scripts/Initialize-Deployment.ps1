@@ -23,6 +23,13 @@ $account = az account show --subscription $SubscriptionId --output json | Conver
 if ($account.state -ne 'Enabled') { throw 'The selected Azure subscription is not enabled.' }
 $repo = gh repo view $Repository --json viewerPermission | ConvertFrom-Json
 if ($repo.viewerPermission -ne 'ADMIN') { throw 'GitHub repository admin access is required for the production environment.' }
+$oidc = gh api "repos/$Repository/actions/oidc/customization/sub" | ConvertFrom-Json
+if (-not $oidc.use_default -or [string]::IsNullOrWhiteSpace($oidc.sub_claim_prefix)) {
+    throw 'Expected GitHub default OIDC claims with a reported subject prefix. Review custom claims before provisioning.'
+}
+# GitHub's default prefix can include immutable owner/repository IDs. Use the
+# authoritative prefix instead of reconstructing the obsolete name-only form.
+$subject = "$($oidc.sub_claim_prefix):environment:production"
 
 $environmentRoute = "repos/$Repository/environments/production"
 $environments = gh api "repos/$Repository/environments" --paginate --jq '.environments[].name'
@@ -55,7 +62,7 @@ $identityName = 'ingacookbook-github'
 $identity = az identity create --subscription $SubscriptionId --resource-group $ResourceGroup --name $identityName --location $Location --output json | ConvertFrom-Json
 az identity federated-credential create --subscription $SubscriptionId --resource-group $ResourceGroup `
     --identity-name $identityName --name github-production --issuer https://token.actions.githubusercontent.com `
-    --subject "repo:${Repository}:environment:production" --audiences api://AzureADTokenExchange --output none
+    --subject $subject --audiences api://AzureADTokenExchange --output none
 
 # Contributor provisions resources; RBAC Administrator lets Aspire assign workload identities.
 # Both are confined to this application's RG, not the subscription.

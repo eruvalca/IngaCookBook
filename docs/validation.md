@@ -5,7 +5,7 @@ addresses the four usability findings and applies the notebook design to editing
 tasting, history, comparison, photos, and the library. The original review of
 `21f20bb` remains in the workflow log as the baseline.
 
-## Azure deployment preparation — October 4, 2026
+## Azure deployment and first live verification — October 4, 2026
 
 First live initialization created the production resource group, OIDC deployment
 identity, GitHub environment/secret, and $75 monthly budget with 50/80/100% alerts.
@@ -15,7 +15,27 @@ correctly skipped deployment. Browser failures included `ERR_NETWORK_CHANGED`
 during concurrent Docker activity and registration/renderer timeouts. The CI
 follow-up separates infrastructure and browser phases, including the two browser
 AppHosts, while retaining all tests and their existing internal parallel settings.
-The first successful live release remains pending rerun verification.
+The retry for `9763168` passed all **727 tests**, with zero failures/skips, and
+the deployment model/bundle checks. Azure login then exposed GitHub's enabled
+immutable OIDC subject format. The deployment identity was updated to the
+repository API's actual `sub_claim_prefix` plus `:environment:production`, and
+bootstrap now discovers that prefix instead of assuming the legacy format.
+Only the failed deployment job was retried; the passing validation remains valid.
+The native Aspire deployment then succeeded: Central US infrastructure, managed
+dashboard, the exact migration job execution, and the ready web revision. The first
+public HTTP check timed out during initial ingress availability; rerunning the
+seven endpoints locally passed. The smoke script now retries only transient safe
+GET failures, bounded to four attempts; nine offline regression scenarios pass.
+
+Live browser checks verified registration without email, workspace creation, a
+recipe with ingredients/instructions, a batch, an 8/10 tasting, and photo upload
+and retrieval (the rendered image decoded to 192×192). No browser errors or
+application warning/error entries were observed during those checks. The actual
+preview ARM API confirms managed Data Protection is enabled; the older CLI model
+omits that property. The owner command inside the running container generated a
+private recovery link for the disposable account. The managed dashboard redirects
+to Microsoft sign-in; viewing its authenticated UI requires the owner's browser
+sign-in. Follow the runbook for cross-release cookie/recovery checks and cleanup.
 
 The final local full-solution run passed **727 tests**, with **0 failed** and
 **0 skipped**: 309 unit, 306 component, 78 PostgreSQL integration, 17 Aspire
@@ -43,12 +63,10 @@ dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
 
 TRX reports and generated artifacts remain under ignored `TestResults`. Test
 containers and Aspire test applications were disposed. No development database
-was reset, no schema changes were needed, and no Azure resources or GitHub
-settings were changed. The hosted Linux workflow has not yet run. Live OIDC/RBAC,
-Central US capacity, managed dashboard access, blob permissions, persisted keys,
-owner recovery, and restart behavior still require the first live checks in
-[the deployment runbook](../README.md#azure-deployment). Local passing checks do
-not establish those cloud behaviors.
+was reset and no schema changes were needed. The local preparation itself made
+no Azure/GitHub changes; the authorized first live deployment and its observed
+results are recorded above. Local passing checks alone do not establish cloud
+behavior; retain [the deployment runbook](../README.md#azure-deployment) for releases.
 
 The deployment review follow-up adds a current-`main` check as the first step
 inside the deployment lock. All later steps require its `deploy=true` result;
@@ -56,8 +74,8 @@ active deployments remain non-canceling. `Test-DeploymentWorkflow.ps1` executes
 the actual inline guard and passed six scenarios: current commit, older commit
 finishing validation later, CLI failure, missing SHA, malformed SHA, and lookup
 exception. It also verifies the lock and downstream conditions. actionlint 1.7.12
-passes for the updated workflow. These checks make no external calls; actual
-GitHub scheduling still needs the first hosted run.
+passes for the updated workflow. These checks make no external calls. The hosted
+deployment also passed the current-main guard before Azure login.
 
 The follow-up solution build passed with zero warnings/errors. The unit and
 component suites passed **309** and **306** tests respectively, with **0 failures

@@ -387,8 +387,8 @@ existing password/passkey/owner-recovery workflow.
 ## Azure deployment
 
 The production configuration is implemented in `IngaCookBook.AppHost/Deployment`.
-It has been validated locally; Azure provisioning and GitHub bootstrap still require
-the first live run. `aspire deploy` owns infrastructure and application deployment;
+Azure and GitHub were initialized on October 4, 2026, and the first application
+revision is deployed. `aspire deploy` owns infrastructure and application deployment;
 there is no `azure.yaml`, separately maintained Bicep, or deployed AppHost process.
 The selected target is the default Pay-As-You-Go subscription, **Central US**, and
 the dedicated **`rg-ingacookbook-prod`** resource group. Published artifacts are
@@ -404,7 +404,9 @@ previews, not inputs to `aspire deploy`.
 | Telemetry | Managed Aspire dashboard; Log Analytics retains logs for 30 days, with a 0.1-GB/day ingestion cap. The cap can interrupt logging and is not an exact billing ceiling. |
 | Budget | Resource-group budget of 75 in the subscription billing currency (the selected subscription uses USD), with actual-spend notifications at 50%, 80%, and 100%. This is not a spending cap. |
 
-The generated HTTPS address is `ingacookbook.<environment-domain>.azurecontainerapps.io`.
+The live application is [Inga's recipe notebook](https://ingacookbook.proudfield-b5c3641a.centralus.azurecontainerapps.io).
+The managed [Aspire dashboard](https://aspire-dashboard.ext.proudfield-b5c3641a.centralus.azurecontainerapps.io)
+uses the Azure account associated with this subscription.
 The dashboard requires Azure authentication; it is not an anonymous admin page.
 Use its URL from the Aspire deployment summary or the Container Apps environment
 in the portal. Its live telemetry is not a durable tracing archive; Log Analytics
@@ -417,8 +419,8 @@ Kerberos negotiation is disabled in both connection secrets. This allows network
 tenants too; authentication is still required. This is not a private-endpoint/VNet
 deployment. Storage also has a public service endpoint with authenticated private
 blobs. These choices avoid adding networking infrastructure for the initial small
-deployment. Capacity and subscription quota are checked by the first deployment;
-the earlier Central US SKU discovery did not reserve capacity.
+deployment. The first deployment successfully provisioned the selected Central US
+resources; future scaling remains subject to capacity and subscription quotas.
 
 ### First-time setup
 
@@ -438,7 +440,10 @@ Then run the same command without `-WhatIf` after approving the target. The scri
 
 1. Registers the required Azure resource providers and creates the selected RG.
 2. Creates `ingacookbook-github`, a user-assigned identity with a federated credential
-   for `repo:eruvalca/IngaCookBook:environment:production`. Its Contributor and Role
+   using GitHub's reported OIDC `sub_claim_prefix` plus `:environment:production`.
+   This includes immutable owner/repository IDs when enabled; name-only credentials
+   do not match those tokens. Custom OIDC claims are rejected for review.
+   Its Contributor and Role
    Based Access Control Administrator roles are confined to this RG. The latter
    lets Aspire grant its application identities storage/Key Vault/registry access.
 3. Creates the GitHub `production` environment restricted to the `main` branch.
@@ -498,7 +503,7 @@ deployment wait. Polling tolerates transient read failures; an uncertain start i
 not automatically repeated. Inspect the execution before retrying a failed release.
 
 The gate is not a database rollback: earlier schema or infrastructure writes may
-have succeeded. After real users begin, use migrations compatible with the running
+have succeeded. Now that production exists, use migrations compatible with the running
 version, preserve migration history, and back up before destructive schema changes.
 Revert faulty application changes on `main` to release known-good code through the
 same workflow; do not assume that activating old code reverses the database. Restore
@@ -526,7 +531,11 @@ Use a private operator terminal, never CI or captured dashboard commands. Verify
 the person's identity as described below. The first live validation must establish
 that the actual Azure key-ring integration also works in this operator process.
 
-The workflow runs `scripts/Test-Production.ps1` for public HTTP checks. Before
+The workflow runs `scripts/Test-Production.ps1` for public HTTP checks. Each safe GET
+allows up to four attempts for connection/timeouts or HTTP 408/429/502/503/504,
+with a 30-second request timeout and five seconds between attempts. Other HTTP
+failures and unhealthy payloads fail immediately. This accommodates initial public
+ingress propagation without treating persistent failures as success. Before
 inviting the first user, also register a disposable account, create a workspace,
 recipe/version/batch/tasting, upload and retrieve a photo, and check dashboard logs.
 Then release a harmless change and verify sign-in survives it, a private owner
@@ -763,13 +772,13 @@ and [Azure Email .NET SDK](https://learn.microsoft.com/dotnet/api/overview/azure
 
 ## EF migrations
 
-During the current pre-deployment stage, all data is disposable test data and
-earlier development schemas need not remain compatible. Schema changes may
-replace the migration history with a new initial migration and reset the
-IngaCookBook development database. Verify the application/database target first,
-generate through the migration resource below, and verify startup and migration
-tests against the fresh baseline. Do not reset other projects or reset data for
-changes that need no schema update. Revisit this policy before real users or deployment.
+Azure production resources now exist. Preserve deployed migrations and add new
+migrations compatible with the running application; do not replace them with a
+fresh initial migration. Production resets, migration squashing, and resource
+deletion require explicit authorization and a recovery plan. Local development
+data remains disposable when a schema change needs a reset. Verify the exact local
+IngaCookBook database first, preserve committed migrations, and verify startup and
+migration tests afterward. Do not reset other projects or reset data unnecessarily.
 
 `Aspire.Hosting.EntityFrameworkCore` **13.6.0-preview.1.26479.8** manages
 `ingacookbook-migrations` and its **dotnet-ef 10.0.12** tool. It does not alter the machine's
