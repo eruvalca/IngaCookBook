@@ -62,6 +62,15 @@ capacity, managed Data Protection/recovery, dashboard access and budget delivery
 require the first-deployment smoke checks in `README.md`; local validation does not
 claim to cover them.
 
+The Linux deployment workflow runs test projects in sequential phases, with the
+shared-app and email-free browser workflows in separate invocations. This prevents
+other suites' Docker network creation/teardown from interrupting Chromium requests
+with `ERR_NETWORK_CHANGED`. The first browser phase excludes only
+`EmailFreeAccountWorkflowTests`, and the second selects exactly that class, so
+the complementary filters retain the complete browser project. Each invocation preserves the
+checked-in `all` / `conservative` / `1x` xUnit settings. Reports use separate
+directories so the browser invocations do not overwrite each other's results.
+
 ### Account email checks
 
 The existing test AppHost defaults to an explicit `--Email:Provider=Mailpit` before

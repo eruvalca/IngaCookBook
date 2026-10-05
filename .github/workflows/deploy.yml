@@ -37,8 +37,21 @@ jobs:
       - name: Install Chromium and dependencies
         shell: pwsh
         run: ./tests/IngaCookBook.PlaywrightTests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
-      - name: Run all five test projects
-        run: dotnet test --solution IngaCookBook.slnx --no-build --report-trx --results-directory TestResults/ci
+      # Docker network changes can abort Chromium requests on Linux. Finish the
+      # infrastructure suites before browsers, and keep the two browser AppHosts
+      # in separate phases. Each phase retains the repository's xUnit parallelism.
+      - name: Run unit tests
+        run: dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj --no-build --report-trx --results-directory TestResults/ci/unit
+      - name: Run component tests
+        run: dotnet test --project tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj --no-build --report-trx --results-directory TestResults/ci/component
+      - name: Run PostgreSQL integration tests
+        run: dotnet test --project tests/IngaCookBook.IntegrationTests/IngaCookBook.IntegrationTests.csproj --no-build --report-trx --results-directory TestResults/ci/integration
+      - name: Run Aspire integration tests
+        run: dotnet test --project tests/IngaCookBook.AspireIntegrationTests/IngaCookBook.AspireIntegrationTests.csproj --no-build --report-trx --results-directory TestResults/ci/aspire
+      - name: Run notebook browser workflows
+        run: dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-build --filter-not-class 'IngaCookBook.PlaywrightTests.EmailFreeAccountWorkflowTests' --report-trx --results-directory TestResults/ci/notebook
+      - name: Run email-free browser workflow
+        run: dotnet test --project tests/IngaCookBook.PlaywrightTests/IngaCookBook.PlaywrightTests.csproj --no-build --filter-class 'IngaCookBook.PlaywrightTests.EmailFreeAccountWorkflowTests' --report-trx --results-directory TestResults/ci/email-free
       - name: Validate deployment artifacts without Azure
         shell: pwsh
         run: |

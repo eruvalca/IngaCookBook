@@ -7,6 +7,16 @@ tasting, history, comparison, photos, and the library. The original review of
 
 ## Azure deployment preparation — October 4, 2026
 
+First live initialization created the production resource group, OIDC deployment
+identity, GitHub environment/secret, and $75 monthly budget with 50/80/100% alerts.
+The first hosted run for `c2e08db` passed build, formatting, and workflow guard
+checks, but passed only 718/727 tests (nine browser failures, zero skips), so it
+correctly skipped deployment. Browser failures included `ERR_NETWORK_CHANGED`
+during concurrent Docker activity and registration/renderer timeouts. The CI
+follow-up separates infrastructure and browser phases, including the two browser
+AppHosts, while retaining all tests and their existing internal parallel settings.
+The first successful live release remains pending rerun verification.
+
 The final local full-solution run passed **727 tests**, with **0 failed** and
 **0 skipped**: 309 unit, 306 component, 78 PostgreSQL integration, 17 Aspire
 integration, and 17 Chromium browser tests. The preceding committed baseline

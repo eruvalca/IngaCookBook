@@ -464,6 +464,8 @@ the repository variable `DEPLOYMENT_ENABLED=false` when needed.
 build, formatter verification, all five test projects, Bicep compilation/model
 checks, and the real Linux migration bundle against disposable PostgreSQL 16.
 The latter applies the bundle twice and checks Identity's passkey table.
+On the Linux runner, test projects and the two browser app configurations run in
+separate phases to avoid Docker network changes interrupting browser requests.
 Action dependencies are pinned to commit SHAs. Only TRX reports are uploaded;
 deployment state, console dumps, secrets and generated infrastructure are not.
 
