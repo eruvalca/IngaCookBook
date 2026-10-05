@@ -98,11 +98,14 @@ public sealed class ServiceDefaultsExtensionsTests
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task DevelopmentHealthEndpointsSeparateReadinessFromLivenessAsync(bool explicitStaticCall)
+    [InlineData(false, "Development")]
+    [InlineData(true, "Development")]
+    [InlineData(false, "Production")]
+    [InlineData(true, "Production")]
+    public async Task EnabledHealthEndpointsSeparateReadinessFromLivenessAsync(bool explicitStaticCall, string environment)
     {
-        var builder = CreateBuilder(Environments.Development);
+        var builder = CreateBuilder(environment);
+        builder.Configuration["HealthChecks:Enabled"] = string.Equals(environment, "Production", StringComparison.Ordinal) ? "true" : "false";
         builder.AddDefaultHealthChecks();
         builder.Services.AddHealthChecks().AddCheck("startup", () => HealthCheckResult.Unhealthy());
         await using var app = builder.Build();

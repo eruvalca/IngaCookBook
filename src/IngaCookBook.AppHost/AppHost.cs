@@ -1,12 +1,21 @@
+using IngaCookBook.AppHost.Deployment;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgres = builder.AddPostgres("postgres")
-    .WithDataVolume()
-    .WithRepl();
-var database = postgres.AddDatabase("ingacookbookdb", "ingacookbook");
-var blobs = builder.AddAzureStorage("photostorage")
-    .RunAsEmulator(emulator => emulator.WithDataVolume())
-    .AddBlobs("recipephotos");
+IResourceBuilder<IResourceWithConnectionString> database;
+if (builder.ExecutionContext.IsRunMode)
+{
+    var postgres = builder.AddPostgres("postgres").WithDataVolume().WithRepl();
+    postgres.WithPgAdmin(pgAdmin => pgAdmin.WithExplicitStart());
+    database = postgres.AddDatabase("ingacookbookdb", "ingacookbook");
+}
+else
+{
+    database = ProductionInfrastructure.Add(builder);
+}
+var storage = builder.AddAzureStorage("photostorage")
+    .RunAsEmulator(emulator => emulator.WithDataVolume());
+var blobs = storage.AddBlobs("recipephotos");
 
 var web = builder.AddProject<Projects.IngaCookBook>("ingacookbook")
     .WithReference(database)
@@ -17,7 +26,7 @@ var web = builder.AddProject<Projects.IngaCookBook>("ingacookbook")
     .WithHttpHealthCheck("/health");
 
 // Registration and owner-assisted recovery do not require an email service.
-var emailProvider = builder.Configuration["Email:Provider"] ?? "None";
+var emailProvider = builder.ExecutionContext.IsRunMode ? builder.Configuration["Email:Provider"] ?? "None" : "None";
 if (string.Equals(emailProvider, "None", StringComparison.Ordinal))
 {
     web.WithEnvironment("Email__Provider", "None");
@@ -48,7 +57,6 @@ else
 var migrations = web.AddEFMigrations("ingacookbook-migrations", "IngaCookBook.Data.ApplicationDbContext",
         tool => tool.WithToolVersion("10.0.12"))
     .WithReference(database)
-    .WithReference(blobs)
     .WaitFor(database)
     // EF constructs the web host at design time but does not serve HTTP. Avoid inherited DCP endpoint tokens.
     .WithEnvironment("ASPNETCORE_URLS", "http://127.0.0.1:0")
@@ -58,9 +66,18 @@ var migrations = web.AddEFMigrations("ingacookbook-migrations", "IngaCookBook.Da
 
 if (builder.ExecutionContext.IsRunMode)
 {
+    migrations.WithReference(blobs);
     migrations.RunDatabaseUpdateOnStart();
     web.WaitForCompletion(migrations);
-    postgres.WithPgAdmin(pgAdmin => pgAdmin.WithExplicitStart());
+}
+else
+{
+    // EF constructs the real web startup model, but the bundle only uses the database.
+    // Pass the blob endpoint without declaring a second migration database reference.
+    migrations.WithEnvironment("ConnectionStrings__recipephotos", blobs.Resource.ConnectionStringExpression);
+    ProductionInfrastructure.ConfigurePhotos(storage);
+    ProductionInfrastructure.ConfigureWeb(web);
+    MigrationDeployment.Configure(builder, web, migrations);
 }
 
 // The host owns process shutdown (Ctrl+C/signals); there is no caller request lifetime.

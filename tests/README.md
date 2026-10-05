@@ -15,6 +15,53 @@ the CLI and editor find `global.json` and `IngaCookBook.slnx`.
 `IngaCookBook.Testing` is a shared support library, not a test project. It configures
 isolated AppHost builders for the Aspire and Playwright projects.
 
+### Deployment validation
+
+`MigrationDeploymentTests` in the Aspire test project use the Azure SDK's mockable
+resource contracts and `FakeTimeProvider`; they do not call Azure. They verify the
+exact started execution is polled, migration success gates web provisioning,
+missing steps fail closed, terminal failures/deadlines stop release, and cancellation
+is preserved. The AppHost grants that test assembly internal access to its deployment
+policy only. Unit tests cover production health opt-in and model-build configuration
+without changing runtime connection requirements.
+
+After building and running the .NET suites, validate the actual published artifacts:
+
+```powershell
+az bicep install --version v0.47.16
+./scripts/Test-DeploymentModel.ps1
+./scripts/Test-MigrationBundle.ps1
+./scripts/Test-DeploymentWorkflow.ps1
+```
+
+The model check runs `aspire publish` in a separate `Validation` environment with a
+non-secret test password and an invalid Azure subscription, compiles all generated
+Bicep modules, and verifies sizing, HTTPS/probes, private storage, retention,
+dashboard, credentials and absence of local developer services. It never deploys.
+The bundle check needs Docker: it runs the generated Linux image twice against
+isolated PostgreSQL 16, verifies all repository migrations and Identity schema 3,
+and removes its own random-named containers/network/image even after failure.
+No development ports, volumes or database are used. Generated artifacts/logs remain
+under ignored `TestResults/deployment-model`; never upload deployment state/secrets.
+
+The workflow check runs the actual inline freshness guard with a stubbed GitHub
+CLI. It verifies that the current commit proceeds, an older commit finishing
+validation later is skipped, and failed, missing, malformed, or exceptional
+lookups cannot authorize deployment. It also checks the deployment lock, that the
+guard is the first deployment step, and that every later step requires its success.
+It needs only PowerShell 7 and performs no GitHub or Azure calls. CI runs it before
+the infrastructure checks.
+
+CI exports the public development HTTPS certificate with `dotnet dev-certs` and
+adds it to Ubuntu's CA store on its disposable runner before running integration
+tests. This preserves normal `HttpClient` certificate validation; no private key
+is exported. See [.NET certificate export options](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-dev-certs#options).
+
+CI runs these checks before the production deployment job. Live Azure OIDC/RBAC,
+capacity, managed Data Protection/recovery, dashboard access and budget delivery
+require the first-deployment smoke checks in `README.md`; local validation does not
+claim to cover them.
+
 ### Account email checks
 
 The existing test AppHost defaults to an explicit `--Email:Provider=Mailpit` before

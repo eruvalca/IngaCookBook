@@ -5,6 +5,61 @@ addresses the four usability findings and applies the notebook design to editing
 tasting, history, comparison, photos, and the library. The original review of
 `21f20bb` remains in the workflow log as the baseline.
 
+## Azure deployment preparation — October 4, 2026
+
+The final local full-solution run passed **727 tests**, with **0 failed** and
+**0 skipped**: 309 unit, 306 component, 78 PostgreSQL integration, 17 Aspire
+integration, and 17 Chromium browser tests. The preceding committed baseline
+passed 705 tests. The solution builds with zero warnings/errors and formatting
+verification is clean.
+
+| Requirement | Evidence |
+| --- | --- |
+| Migration success gates the actual web provisioning step | `MigrationSuccessGatesActualWebProvisioning` and `MissingProvisioningStepsFailClosed`; the real `aspire publish` also executed `validate-migration-gate` after resolving Azure targets. |
+| Deployment waits for its own execution, rejects failures, and never restarts an uncertain job | `MigrationWaitsForTheStartedExecutionToSucceedAsync`, `MigrationRejectsEveryUnsuccessfulTerminalStatusAsync`, `MigrationDeadlineStopsReleaseWithoutRestartingTheJobAsync`, `MigrationPreservesCallerCancellationAsync`, `MigrationPreservesAzureStartFailureAndDoesNotPollAsync`, and `MissingExecutionIsRetriedWithoutStartingAnotherJobAsync`. |
+| Cloud-free EF bundle generation retains the actual runtime model | `ModelBuildUsesNonRoutableDefaultsWithoutAzureOrDatabase`, `ExplicitConnectionsArePreserved`, and `MissingRuntimeConnectionsRemainMissing`; the generated Linux container applied all six migrations to disposable PostgreSQL 16, then ran again without changes. The passkey table was verified after the repeat run. |
+| Production readiness remains separate from liveness and is explicitly enabled | `EnabledHealthEndpointsSeparateReadinessFromLivenessAsync` covers Development and opted-in Production; existing tests retain the default disabled behavior outside Development. |
+| Published infrastructure matches the selected production configuration | `Test-DeploymentModel.ps1` compiles every generated Bicep module and passes 29 checks for sizing, storage privacy/soft deletion, database TLS, stable credentials, probes, managed Data Protection, dashboard, telemetry limits, and the migration image. |
+| Workflow and bootstrap can be inspected without provisioning | actionlint 1.7.12 passes; `Initialize-Deployment.ps1 -WhatIf` returns before external operations. The workflow trusts only the generated public development certificate on its disposable Linux runner for real HTTPS integration tests. |
+
+```powershell
+dotnet format IngaCookBook.slnx --severity warn
+dotnet build IngaCookBook.slnx --nologo
+dotnet test --solution IngaCookBook.slnx --no-build --report-trx --results-directory TestResults/deployment-final
+./scripts/Test-DeploymentModel.ps1
+./scripts/Test-MigrationBundle.ps1
+dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
+```
+
+TRX reports and generated artifacts remain under ignored `TestResults`. Test
+containers and Aspire test applications were disposed. No development database
+was reset, no schema changes were needed, and no Azure resources or GitHub
+settings were changed. The hosted Linux workflow has not yet run. Live OIDC/RBAC,
+Central US capacity, managed dashboard access, blob permissions, persisted keys,
+owner recovery, and restart behavior still require the first live checks in
+[the deployment runbook](../README.md#azure-deployment). Local passing checks do
+not establish those cloud behaviors.
+
+The deployment review follow-up adds a current-`main` check as the first step
+inside the deployment lock. All later steps require its `deploy=true` result;
+active deployments remain non-canceling. `Test-DeploymentWorkflow.ps1` executes
+the actual inline guard and passed six scenarios: current commit, older commit
+finishing validation later, CLI failure, missing SHA, malformed SHA, and lookup
+exception. It also verifies the lock and downstream conditions. actionlint 1.7.12
+passes for the updated workflow. These checks make no external calls; actual
+GitHub scheduling still needs the first hosted run.
+
+The follow-up solution build passed with zero warnings/errors. The unit and
+component suites passed **309** and **306** tests respectively, with **0 failures
+and 0 skips**. The browser/database suites were not repeated for this workflow-only
+fix; the 727-test result above belongs to the preceding implementation run.
+
+```powershell
+pwsh -NoProfile -File ./scripts/Test-DeploymentWorkflow.ps1
+dotnet test --project tests/IngaCookBook.UnitTests/IngaCookBook.UnitTests.csproj --no-build
+dotnet test --project tests/IngaCookBook.ComponentTests/IngaCookBook.ComponentTests.csproj --no-build
+```
+
 ## Email-free registration and owner recovery — October 4, 2026
 
 The pre-change baseline passed **289 unit** and **302 component** tests, with no
@@ -52,7 +107,8 @@ dotnet format IngaCookBook.slnx --severity warn --verify-no-changes
 
 No Azure resources, external email sends, deployment, schema changes, or development
 database resets were involved. Production key-ring persistence and an operator
-terminal still need deployment configuration; see [the recovery runbook](../README.md#owner-assisted-password-recovery).
+terminal are now configured by the deployment work above, but still require
+live verification; see [the recovery runbook](../README.md#owner-assisted-password-recovery).
 
 ## Local account email — October 4, 2026
 

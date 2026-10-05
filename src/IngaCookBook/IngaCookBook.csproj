@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-IngaCookBook-926f718a-beda-4d74-bd4c-f5dfcd1c2d4c</UserSecretsId>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <!-- Aspire builds the EF migration bundle for the Container Apps Linux job. -->
+    <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>

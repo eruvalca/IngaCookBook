@@ -322,9 +322,16 @@ dotnet test --solution IngaCookBook.slnx
   and dispose created contexts. Preserve Identity schema version 3 and passkeys.
 - `/health` includes database readiness; `/alive` checks process liveness
   independently of database availability. Preserve the bounded database
-  readiness check and Aspire's monitoring of `/health`. Both endpoints are
-  currently Development-only; changing their exposure is a deliberate
-  deployment decision.
+  readiness check and Aspire's monitoring of `/health`. Development enables both;
+  the production AppHost explicitly opts in with `HealthChecks:Enabled=true`.
+  Keep their anonymous responses status-only and use separate ACA HTTP probes.
+- Production infrastructure lives in the AppHost deployment model. Keep native
+  `aspire deploy`, the migration-success gate before web provisioning, and the
+  main-only GitHub OIDC environment. Do not deploy published `main.bicep` directly:
+  compute/image deployment and migration ordering belong to the Aspire pipeline.
+  See `README.md` for bootstrap, budgets, secrets and the required live checks.
+  Once real users begin, preserve applied migration history and review database
+  compatibility/backup requirements before changing schemas.
 - Author migrations through the built-in `ingacookbook-migrations` resource using the
   web project's actual startup model. Keep migrations and snapshot under
   `src/IngaCookBook/Data/Migrations`, namespace `IngaCookBook.Migrations`. Rebuild after

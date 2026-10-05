@@ -369,11 +369,9 @@ Azure; photos become inaccessible through the app immediately and bytes are
 removed when storage is available. `DurablePhotoCleanup` adds the queue table
 through the existing migration startup dependency.
 
-For a cloud deployment, configure the Azure storage resource/service connection
-and grant the application identity blob data access, including listing and deleting
-blobs/snapshots and creating the container (or provision it separately). Keep
-credentials outside source.
-The emulator is local only; these changes do not deploy any Azure resources.
+The production AppHost grants the application identity blob data access, including
+listing/deleting blobs and creating the container. Shared-key authentication and
+anonymous blob access are disabled. The emulator remains local only.
 Database and blob backups must be retained together. Azure retention/versioning
 and backup policies govern retained copies separately from application deletion.
 This first release has no individual photo-deletion UI or general orphan scan;
@@ -382,37 +380,167 @@ operational cleanup.
 
 Identity schema version 3 is retained, including the `AspNetUserPasskeys` table.
 Registration signs users in immediately by default, without sending email. Email
-addresses remain unverified login identifiers. External-login provider credentials, production
-secrets, HTTPS/domain configuration, deployment, and the desired exposure of health
-endpoints still require application-specific work.
+addresses remain unverified login identifiers. External-login providers remain
+optional and need their own credentials. The production setup below uses the
+existing password/passkey/owner-recovery workflow.
 
-## Planned Azure deployment
+## Azure deployment
 
-Deployment is not implemented or provisioned yet. The selected initial target is
-the default Pay-As-You-Go subscription, **Central US**, in a dedicated
-`rg-ingacookbook-prod` resource group. The intended configuration is Azure Container
-Apps Consumption (one 0.5-vCPU / 1-GiB replica), PostgreSQL Flexible Server
-Standard_B1ms with 32 GiB storage and backups, private LRS blob storage, Basic ACR,
-and the managed Aspire dashboard with bounded telemetry retention. Read-only Azure
-discovery on October 4, 2026 listed Container Apps and B1ms in Central US; this does
-not reserve capacity or establish subscription quota at deployment time.
+The production configuration is implemented in `IngaCookBook.AppHost/Deployment`.
+It has been validated locally; Azure provisioning and GitHub bootstrap still require
+the first live run. `aspire deploy` owns infrastructure and application deployment;
+there is no `azure.yaml`, separately maintained Bicep, or deployed AppHost process.
+The selected target is the default Pay-As-You-Go subscription, **Central US**, and
+the dedicated **`rg-ingacookbook-prod`** resource group. Published artifacts are
+previews, not inputs to `aspire deploy`.
 
-Use the generated HTTPS hostname, preferably with `ingarecipes` as the app name.
-Container Apps uses `<app>.<environment>.<region>.azurecontainerapps.io`, rather than
-the App Service `azurewebsites.net` suffix. The planned resource-group budget is
-USD 75/month with actual-spend alerts at 50%, 80%, and 100%; alerts do not cap spend.
-Keep the owner's chosen test/alert inbox in deployment configuration rather than
-hard-coding personal contact information in the public repository.
+| Resource | Initial configuration |
+| --- | --- |
+| Container Apps | Standard managed environment with Consumption workload profile; `ingacookbook` has one 0.5-vCPU / 1-GiB replica, single revision mode and sticky sessions. |
+| PostgreSQL Flexible Server | PostgreSQL 16 (the pinned Azure integration default), Standard_B1ms, 32 GiB, seven-day backups, no HA/geo-redundancy. Local development stays on PostgreSQL 18.3. |
+| Photos | Standard LRS blob storage, managed-identity access, no anonymous/shared-key access, seven-day blob/container soft deletion. |
+| Registry | Basic ACR, identity-based image pulls. |
+| Secrets | Key Vault holds database connection strings; a stable database password comes from the GitHub production environment. Database administrator name is `cookbookadmin`. |
+| Telemetry | Managed Aspire dashboard; Log Analytics retains logs for 30 days, with a 0.1-GB/day ingestion cap. The cap can interrupt logging and is not an exact billing ceiling. |
+| Budget | Resource-group budget of 75 in the subscription billing currency (the selected subscription uses USD), with actual-spend notifications at 50%, 80%, and 100%. This is not a spending cap. |
 
-Implementation still needs the Aspire production graph, an explicitly executed
-migration job that gates the web rollout, production health probes and HTTPS/Blazor
-configuration, identities/secrets, and GitHub Actions with OIDC and tests before
-automatic deployments from `main`. Persist and protect a shared ASP.NET Core Data
-Protection key ring across replicas, restarts, and the operator recovery process.
-Preserve Azurite, the optional Mailpit mode, and disposable test resources locally.
-Provisioning requires a deliberate live validation step. The selected initial
-production setup sends no account email and needs no email provider or sender domain.
-Azure budget notifications are independent of application email.
+The generated HTTPS address is `ingacookbook.<environment-domain>.azurecontainerapps.io`.
+The dashboard requires Azure authentication; it is not an anonymous admin page.
+Use its URL from the Aspire deployment summary or the Container Apps environment
+in the portal. Its live telemetry is not a durable tracing archive; Log Analytics
+provides retained application/console logs. No email service, sender domain, Mailpit,
+pgAdmin, or Azurite is deployed. Azure budget email is independent of application email.
+
+PostgreSQL initially uses password authentication with Azure's `AllowAllAzureIps`
+firewall rule and certificate/hostname-verified TLS (`SSL Mode=VerifyFull`). Unused
+Kerberos negotiation is disabled in both connection secrets. This allows network access from other Azure
+tenants too; authentication is still required. This is not a private-endpoint/VNet
+deployment. Storage also has a public service endpoint with authenticated private
+blobs. These choices avoid adding networking infrastructure for the initial small
+deployment. Capacity and subscription quota are checked by the first deployment;
+the earlier Central US SKU discovery did not reserve capacity.
+
+### First-time setup
+
+Prerequisites: .NET from `global.json`, Aspire CLI 13.6.0, Docker with Linux containers,
+PowerShell 7, Azure CLI, and GitHub CLI. Sign in with `az login` and `gh auth login`.
+The bootstrap operator needs subscription permission to register providers and
+create the RG, manage role assignments/budgets, and repository admin access.
+No Microsoft 365 subscription or organizational mailbox is required.
+
+Review the non-mutating preview first:
+
+```powershell
+./scripts/Initialize-Deployment.ps1 -SubscriptionId <subscription-guid> -AlertEmail <owned-alert-inbox> -WhatIf
+```
+
+Then run the same command without `-WhatIf` after approving the target. The script:
+
+1. Registers the required Azure resource providers and creates the selected RG.
+2. Creates `ingacookbook-github`, a user-assigned identity with a federated credential
+   for `repo:eruvalca/IngaCookBook:environment:production`. Its Contributor and Role
+   Based Access Control Administrator roles are confined to this RG. The latter
+   lets Aspire grant its application identities storage/Key Vault/registry access.
+3. Creates the GitHub `production` environment restricted to the `main` branch.
+   An existing environment with different branch rules is rejected for review;
+   existing reviewer settings are not overwritten.
+4. Creates/updates the monthly budget using the supplied private alert inbox.
+5. Sets the production environment variables `AZURE_SUBSCRIPTION_ID`,
+   `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_LOCATION`, and `AZURE_RESOURCE_GROUP`.
+   Generates `POSTGRES_PASSWORD` once and sends it to GitHub via stdin; it is never
+   printed. Reruns retain it. If the database exists but the secret is missing,
+   restore the current credential instead of generating a replacement.
+6. Enables the repository variable `DEPLOYMENT_ENABLED=true` only after setup
+   succeeds. The script itself does not deploy application infrastructure.
+
+Keep the selected inbox and Azure identifiers in deployment configuration, not
+source. This script changes Azure/GitHub state; `-WhatIf` performs no CLI calls.
+Do not rerun it merely to diagnose a deployment. Disable automatic deployment with
+the repository variable `DEPLOYMENT_ENABLED=false` when needed.
+
+### Automatic releases and migration safety
+
+`.github/workflows/deploy.yml` validates pull requests and `main`: full solution
+build, formatter verification, all five test projects, Bicep compilation/model
+checks, and the real Linux migration bundle against disposable PostgreSQL 16.
+The latter applies the bundle twice and checks Identity's passkey table.
+Action dependencies are pinned to commit SHAs. Only TRX reports are uploaded;
+deployment state, console dumps, secrets and generated infrastructure are not.
+
+After successful validation, enabled `main` pushes (or manual workflow dispatch on
+`main`) log into Azure through OIDC and run:
+
+```powershell
+aspire deploy --environment Production --non-interactive
+```
+
+The deploy job supplies `Azure__SubscriptionId`, `Azure__Location`,
+`Azure__ResourceGroup`, `Azure__CredentialSource=AzureCli`, and the secret
+`Parameters__postgres_password`. Keep the password unchanged between releases.
+No Azure login client secret or deployment state cache is needed. Production
+deployments are serialized; a newer push does not cancel an in-flight migration.
+GitHub concurrency can replace an older pending run with a newer one.
+After acquiring the deployment lock, the job reads the current `main` SHA from
+GitHub and proceeds only if it matches the validated run's SHA. An older commit
+that finishes validation later is skipped before Azure login, deployment, and
+smoke checks. Failure to verify the current SHA stops the job. A new push during
+an active deployment waits for that deployment to finish; rerunning an old
+workflow cannot intentionally roll back production. Revert on `main` instead.
+
+The native Aspire pipeline builds/pushes both images, provisions the manual
+`ingacookbook-migrations` job, starts it once, and polls that exact execution.
+The web application's **provisioning step** depends on migration success. A failed,
+stopped, unknown, or timed-out job blocks the new web deployment. The job has one
+replica, no retries, a ten-minute execution limit, and a twelve-minute overall
+deployment wait. Polling tolerates transient read failures; an uncertain start is
+not automatically repeated. Inspect the execution before retrying a failed release.
+
+The gate is not a database rollback: earlier schema or infrastructure writes may
+have succeeded. After real users begin, use migrations compatible with the running
+version, preserve migration history, and back up before destructive schema changes.
+Revert faulty application changes on `main` to release known-good code through the
+same workflow; do not assume that activating old code reverses the database. Restore
+PostgreSQL to a new server for a point-in-time recovery, and validate matching photo
+data before switching connections. Soft deletion is recovery assistance, not a full
+coordinated database/blob backup strategy.
+
+### Production behavior and first live verification
+
+The AppHost explicitly enables status-only `/health` and `/alive` endpoints.
+Readiness checks PostgreSQL; liveness does not. HTTP probes carry the trusted
+forwarded HTTPS scheme, and the app accepts forwarded headers behind ACA ingress.
+Do not reuse this proxy setting for a container directly exposed to untrusted traffic.
+
+The generated Container App sets `runtime.dotnet.autoConfigureDataProtection=true`.
+Azure supplies shared Data Protection storage across revisions/replicas. The app's
+discriminator remains `IngaCookBook`. The owner recovery command must run **inside
+the running app's container** so it uses the same environment and key ring:
+
+```powershell
+az containerapp exec --resource-group rg-ingacookbook-prod --name ingacookbook --command "dotnet IngaCookBook.dll account-recovery --user-id <account-reference> --base-url https://<app-host>/"
+```
+
+Use a private operator terminal, never CI or captured dashboard commands. Verify
+the person's identity as described below. The first live validation must establish
+that the actual Azure key-ring integration also works in this operator process.
+
+The workflow runs `scripts/Test-Production.ps1` for public HTTP checks. Before
+inviting the first user, also register a disposable account, create a workspace,
+recipe/version/batch/tasting, upload and retrieve a photo, and check dashboard logs.
+Then release a harmless change and verify sign-in survives it, a private owner
+recovery link works, and the old password is rejected. Remove only that disposable
+account. Confirm budget recipients and a usable restore path. These Azure checks
+cannot be established by local tests or a Bicep preview.
+
+A deployment/restart can disconnect Interactive Server circuits. One warm replica
+and sticky sessions support the initial usage but do not preserve unsaved server
+state across releases. Prefer deploying when the notebook is idle. The existing
+refresh/reconnect UI preserves visible inputs where possible and never silently
+promises that an interrupted write was rolled back.
+
+References: [Aspire deployment](https://aspire.dev/deployment/azure/aca-deployment-aspire-cli/),
+[Azure .NET hosting and Data Protection](https://learn.microsoft.com/azure/container-apps/dotnet-overview),
+[Azure budgets](https://learn.microsoft.com/azure/cost-management-billing/costs/tutorial-acm-create-budgets).
 
 ## Account email
 
@@ -682,7 +810,8 @@ See [Aspire's EF migration integration](https://aspire.dev/integrations/database
 
 ## Health, telemetry, and pgAdmin
 
-The application references `IngaCookBook.ServiceDefaults`. In Development, `/health`
+The application references `IngaCookBook.ServiceDefaults`. In Development, and in
+deployments explicitly setting `HealthChecks:Enabled=true`, `/health`
 checks readiness including PostgreSQL connectivity; `/alive` checks process liveness
 independently of PostgreSQL. Aspire monitors `/health`. The database readiness check
 has a five-second timeout so EF's transient retries do not hold an unhealthy response

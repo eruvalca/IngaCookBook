@@ -16,6 +16,7 @@ using Microsoft.FluentUI.AspNetCore.Components;
 
 var recoveryMode = args.Length > 0 && string.Equals(args[0], "account-recovery", StringComparison.Ordinal);
 var builder = WebApplication.CreateBuilder(recoveryMode ? args[1..] : args);
+DesignTimeConfiguration.Configure(builder.Configuration, EF.IsDesignTime);
 if (recoveryMode)
 {
     // Operator output is private terminal output, never telemetry or a web endpoint.

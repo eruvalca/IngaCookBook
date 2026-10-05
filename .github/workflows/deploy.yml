@@ -1,0 +1,121 @@
+name: Validate and deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+      - name: Install pinned Aspire CLI
+        run: dotnet tool install --global Aspire.Cli --version 13.6.0
+      - name: Trust the test HTTPS certificate on this disposable runner
+        run: |
+          dotnet dev-certs https --export-path "$RUNNER_TEMP/ingacookbook-test.crt" --format PEM
+          sudo install -m 0644 "$RUNNER_TEMP/ingacookbook-test.crt" /usr/local/share/ca-certificates/ingacookbook-test.crt
+          sudo update-ca-certificates
+      - name: Build
+        run: dotnet build IngaCookBook.slnx
+      - name: Check formatting
+        run: dotnet format IngaCookBook.slnx --severity warn --verify-no-changes --no-restore
+      - name: Check stale-deployment protection without GitHub or Azure
+        shell: pwsh
+        run: ./scripts/Test-DeploymentWorkflow.ps1
+      - name: Install Chromium and dependencies
+        shell: pwsh
+        run: ./tests/IngaCookBook.PlaywrightTests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+      - name: Run all five test projects
+        run: dotnet test --solution IngaCookBook.slnx --no-build --report-trx --results-directory TestResults/ci
+      - name: Validate deployment artifacts without Azure
+        shell: pwsh
+        run: |
+          az bicep install --version v0.47.16
+          ./scripts/Test-DeploymentModel.ps1
+      - name: Exercise the production migration bundle with disposable PostgreSQL 16
+        shell: pwsh
+        run: ./scripts/Test-MigrationBundle.ps1
+      - name: Test reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: test-reports
+          path: TestResults/ci/**/*.trx
+          if-no-files-found: ignore
+          retention-days: 7
+
+  deploy:
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.DEPLOYMENT_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment: production
+    concurrency:
+      group: ingacookbook-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check that this validated commit is still current
+        id: freshness
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $currentSha = gh api "repos/$env:GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha'
+          if ($LASTEXITCODE -ne 0 -or $currentSha -cnotmatch '\A[0-9a-f]{40}\z') {
+              throw 'Unable to verify the current main commit. Deployment stopped.'
+          }
+          if ($currentSha -ceq $env:GITHUB_SHA) {
+              'deploy=true' | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+          }
+          else {
+              'deploy=false' | Add-Content -LiteralPath $env:GITHUB_OUTPUT
+              "Skipping superseded commit $env:GITHUB_SHA; current main is $currentSha." | Write-Host
+          }
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: steps.freshness.outputs.deploy == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        if: steps.freshness.outputs.deploy == 'true'
+        with:
+          global-json-file: global.json
+      - run: dotnet tool install --global Aspire.Cli --version 13.6.0
+        if: steps.freshness.outputs.deploy == 'true'
+      - uses: azure/login@935127ca5bb3c4b02c9c2c10060028383878f33f # v3
+        if: steps.freshness.outputs.deploy == 'true'
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy through Aspire (includes migration success gate)
+        if: steps.freshness.outputs.deploy == 'true'
+        env:
+          Azure__SubscriptionId: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          Azure__Location: ${{ vars.AZURE_LOCATION }}
+          Azure__ResourceGroup: ${{ vars.AZURE_RESOURCE_GROUP }}
+          Azure__CredentialSource: AzureCli
+          Parameters__postgres_password: ${{ secrets.POSTGRES_PASSWORD }}
+        run: aspire deploy --environment Production --non-interactive
+      - name: Verify public production endpoints
+        if: steps.freshness.outputs.deploy == 'true'
+        shell: pwsh
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+        run: ./scripts/Test-Production.ps1 -ResourceGroup $env:AZURE_RESOURCE_GROUP
